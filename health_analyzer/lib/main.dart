@@ -13,11 +13,15 @@ void main() async {
   // Ensure Flutter binding is initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize high refresh rate detection and optimization (90Hz, 120Hz displays)
-  await DisplayUtils.initializeHighRefreshRate();
+  try {
+    // Initialize high refresh rate detection and optimization (90Hz, 120Hz displays)
+    await DisplayUtils.initializeHighRefreshRate();
 
-  // Print display capabilities in debug mode
-  DisplayUtils.printDisplayCapabilities();
+    // Print display capabilities in debug mode
+    DisplayUtils.printDisplayCapabilities();
+  } catch (e) {
+    debugPrint('Display initialization non-critical warning: $e');
+  }
 
   runApp(const LabLensApp());
 }
@@ -40,12 +44,17 @@ class _LabLensAppState extends State<LabLensApp> {
   }
 
   Future<void> _loadThemeSettings() async {
-    final amoledMode = await ThemeManager.getAmoledMode();
-    final selectedTheme = await ThemeManager.getSelectedTheme();
-    setState(() {
-      _amoledModeEnabled = amoledMode;
-      _selectedTheme = selectedTheme;
-    });
+    try {
+      final amoledMode = await ThemeManager.getAmoledMode();
+      final selectedTheme = await ThemeManager.getSelectedTheme();
+      if (!mounted) return;
+      setState(() {
+        _amoledModeEnabled = amoledMode;
+        _selectedTheme = selectedTheme;
+      });
+    } catch (e) {
+      debugPrint('Error loading theme settings: $e');
+    }
   }
 
   /// Update AMOLED mode setting

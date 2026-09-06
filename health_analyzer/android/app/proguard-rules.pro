@@ -8,11 +8,18 @@
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
 
+# App Activity & Package
+-keep class com.devasy.lablens.** { *; }
+
 # Sqflite
 -keep class com.tekartik.sqflite.** { *; }
 
+# Shared Preferences
+-keep class io.flutter.plugins.sharedpreferences.** { *; }
+
 # Flutter Secure Storage
 -keep class androidx.security.crypto.** { *; }
+-keep class com.it_nomads.fluttersecurestorage.** { *; }
 
 # Syncfusion PDF Viewer
 -keep class com.syncfusion.** { *; }
