@@ -45,6 +45,8 @@ class ProfileAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = backgroundColor ?? _getColorFromName(context, name);
     final initials = _getInitials(name);
+    final isDarkBg = ThemeData.estimateBrightnessForColor(color) == Brightness.dark;
+    final textColor = isDarkBg ? Colors.white : Theme.of(context).colorScheme.onSurface;
 
     return Container(
       width: size,
@@ -54,7 +56,7 @@ class ProfileAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         border: showBorder
             ? Border.all(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 width: 2,
               )
             : null,
@@ -64,7 +66,7 @@ class ProfileAvatar extends StatelessWidget {
         child: Text(
           initials,
           style: TextStyle(
-            color: Colors.white,
+            color: textColor,
             fontSize: size * 0.4,
             fontWeight: FontWeight.w600,
           ),

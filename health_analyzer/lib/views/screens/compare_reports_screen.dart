@@ -84,7 +84,7 @@ class _CompareReportsScreenState extends State<CompareReportsScreen> {
             Icon(
               Icons.compare_arrows,
               size: 80,
-              color: context.onSurfaceColor.withOpacity(0.3),
+              color: context.onSurfaceColor.withValues(alpha: 0.3),
             ),
             const SizedBox(height: AppTheme.spacing24),
             Text(
@@ -98,7 +98,7 @@ class _CompareReportsScreenState extends State<CompareReportsScreen> {
               'You need at least 2 reports to compare.\nCurrent reports: ${_availableReports.length}',
               textAlign: TextAlign.center,
               style: AppTheme.bodyMedium.copyWith(
-                color: context.onSurfaceColor.withOpacity(0.6),
+                color: context.onSurfaceColor.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: AppTheme.spacing32),
@@ -181,7 +181,7 @@ class _CompareReportsScreenState extends State<CompareReportsScreen> {
               Text(
                 title,
                 style: AppTheme.labelSmall.copyWith(
-                  color: context.onSurfaceColor.withOpacity(0.6),
+                  color: context.onSurfaceColor.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: AppTheme.spacing4),
@@ -199,7 +199,7 @@ class _CompareReportsScreenState extends State<CompareReportsScreen> {
                       Text(
                         selectedReport.labName!,
                         style: AppTheme.bodySmall.copyWith(
-                          color: context.onSurfaceColor.withOpacity(0.6),
+                          color: context.onSurfaceColor.withValues(alpha: 0.6),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -246,7 +246,9 @@ class _CompareReportsScreenState extends State<CompareReportsScreen> {
           children: [
             Text(
               'Select $title',
-              style: AppTheme.headingSmall,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: AppTheme.spacing16),
             ..._availableReports.map((report) {
@@ -282,7 +284,7 @@ class _CompareReportsScreenState extends State<CompareReportsScreen> {
             Icon(
               Icons.touch_app,
               size: 64,
-              color: context.onSurfaceColor.withOpacity(0.3),
+              color: context.onSurfaceColor.withValues(alpha: 0.3),
             ),
             const SizedBox(height: AppTheme.spacing16),
             Text(
@@ -296,7 +298,7 @@ class _CompareReportsScreenState extends State<CompareReportsScreen> {
               'Tap on the cards above to select reports for comparison',
               textAlign: TextAlign.center,
               style: AppTheme.bodyMedium.copyWith(
-                color: context.onSurfaceColor.withOpacity(0.6),
+                color: context.onSurfaceColor.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -456,7 +458,7 @@ class _CompareReportsScreenState extends State<CompareReportsScreen> {
           label,
           textAlign: TextAlign.center,
           style: AppTheme.bodySmall.copyWith(
-            color: context.onPrimaryContainer.withOpacity(0.8),
+            color: context.onPrimaryContainer.withValues(alpha: 0.8),
           ),
         ),
       ],
@@ -506,9 +508,10 @@ class _CompareReportsScreenState extends State<CompareReportsScreen> {
             flex: 2,
             child: Text(
               _formatParameterName(paramName),
-              style: AppTheme.bodyMedium.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: context.onSurfaceColor,
+                  ),
             ),
           ),
 
@@ -544,7 +547,7 @@ class _CompareReportsScreenState extends State<CompareReportsScreen> {
         'N/A',
         textAlign: TextAlign.center,
         style: AppTheme.bodySmall.copyWith(
-          color: context.onSurfaceColor.withOpacity(0.3),
+          color: context.onSurfaceColor.withValues(alpha: 0.3),
         ),
       );
     }
@@ -564,7 +567,7 @@ class _CompareReportsScreenState extends State<CompareReportsScreen> {
     return Column(
       children: [
         Text(
-          '${param.parameterValue.toStringAsFixed(1)}',
+          param.parameterValue.toStringAsFixed(1),
           textAlign: TextAlign.center,
           style: AppTheme.bodyMedium.copyWith(
             fontWeight: FontWeight.bold,
@@ -576,7 +579,7 @@ class _CompareReportsScreenState extends State<CompareReportsScreen> {
             param.unit!,
             textAlign: TextAlign.center,
             style: AppTheme.bodySmall.copyWith(
-              color: context.onSurfaceColor.withOpacity(0.6),
+              color: context.onSurfaceColor.withValues(alpha: 0.6),
             ),
           ),
       ],

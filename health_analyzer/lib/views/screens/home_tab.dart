@@ -13,6 +13,7 @@ import 'report_scan_screen.dart';
 import 'report_details_screen.dart';
 import 'compare_reports_screen.dart';
 import 'profile_list_screen.dart';
+import 'profile_form_screen.dart';
 
 /// Home tab - main view with profile content
 class HomeTab extends StatefulWidget {
@@ -144,7 +145,6 @@ class _HomeTabState extends State<HomeTab> {
           final hasProfile = profileVM.currentProfile != null;
 
           return ExpandableFab(
-            child: const Icon(Icons.add),
             actions: [
               // Scan Report - Primary action
               ExpandableFabAction(
@@ -166,6 +166,7 @@ class _HomeTabState extends State<HomeTab> {
                 onPressed: _navigateToProfiles,
               ),
             ],
+            child: const Icon(Icons.add),
           );
         },
       ),
@@ -243,9 +244,15 @@ class _HomeTabState extends State<HomeTab> {
                       size: 40,
                     ),
                     const SizedBox(height: AppTheme.spacing4),
-                    Text(
-                      profile.name.split(' ')[0],
-                      style: Theme.of(context).textTheme.labelSmall,
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 80),
+                      child: Text(
+                        profile.name.split(' ')[0],
+                        style: Theme.of(context).textTheme.labelSmall,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ],
                 ),
@@ -374,8 +381,16 @@ class _HomeTabState extends State<HomeTab> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
-                  onPressed: () {
-                    // TODO: Navigate to edit profile
+                  tooltip: 'Edit Profile',
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => ProfileFormScreen(profile: profile),
+                      ),
+                    );
+                    if (mounted) {
+                      context.read<ProfileViewModel>().loadProfiles();
+                    }
                   },
                 ),
               ],

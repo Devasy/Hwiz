@@ -323,7 +323,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                 Container(
                   width: 1,
                   height: 40,
-                  color: AppTheme.dividerColor,
+                  color: Theme.of(context).colorScheme.outlineVariant,
                 ),
                 Expanded(
                   child: _buildStatColumn(
@@ -336,7 +336,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                 Container(
                   width: 1,
                   height: 40,
-                  color: AppTheme.dividerColor,
+                  color: Theme.of(context).colorScheme.outlineVariant,
                 ),
                 Expanded(
                   child: _buildStatColumn(
@@ -362,8 +362,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
               ),
               decoration: BoxDecoration(
                 color: abnormalCount > 0
-                    ? AppTheme.errorLight
-                    : AppTheme.successLight,
+                    ? Theme.of(context).colorScheme.errorContainer
+                    : Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
               ),
               child: Row(
@@ -372,8 +372,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                   Icon(
                     abnormalCount > 0 ? Icons.warning : Icons.check_circle,
                     color: abnormalCount > 0
-                        ? AppTheme.errorColor
-                        : AppTheme.successColor,
+                        ? Theme.of(context).colorScheme.onErrorContainer
+                        : Theme.of(context).colorScheme.onPrimaryContainer,
                     size: 20,
                   ),
                   const SizedBox(width: AppTheme.spacing8),
@@ -383,8 +383,9 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                         : 'All values are within normal range',
                     style: AppTheme.titleSmall.copyWith(
                       color: abnormalCount > 0
-                          ? AppTheme.errorColor
-                          : AppTheme.successColor,
+                          ? Theme.of(context).colorScheme.onErrorContainer
+                          : Theme.of(context).colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -472,14 +473,14 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                         vertical: AppTheme.spacing4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.errorLight,
+                        color: Theme.of(context).colorScheme.errorContainer,
                         borderRadius:
                             BorderRadius.circular(AppTheme.radiusSmall),
                       ),
                       child: Text(
                         '$abnormalInGroup',
                         style: AppTheme.labelSmall.copyWith(
-                          color: AppTheme.errorColor,
+                          color: Theme.of(context).colorScheme.onErrorContainer,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -518,7 +519,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
         if (status == 'high') {
           // Error state - red tinted surface
           bgColor = Color.alphaBlend(
-            AppTheme.errorColor.withOpacity(0.12),
+            AppTheme.errorColor.withValues(alpha: 0.12),
             colorScheme.surface,
           );
           borderColor = AppTheme.errorColor;
@@ -527,7 +528,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
         } else if (status == 'low') {
           // Warning state - orange/yellow tinted surface
           bgColor = Color.alphaBlend(
-            AppTheme.warningColor.withOpacity(0.12),
+            AppTheme.warningColor.withValues(alpha: 0.12),
             colorScheme.surface,
           );
           borderColor = AppTheme.warningColor;
@@ -536,7 +537,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
         } else {
           // Success state - green tinted surface
           bgColor = Color.alphaBlend(
-            AppTheme.successColor.withOpacity(0.12),
+            AppTheme.successColor.withValues(alpha: 0.12),
             colorScheme.surface,
           );
           borderColor = AppTheme.successColor;
@@ -554,7 +555,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-            border: Border.all(color: borderColor.withOpacity(0.3), width: 1),
+            border: Border.all(color: borderColor.withValues(alpha: 0.3), width: 1),
           ),
           child: InkWell(
             onTap: () {
@@ -605,7 +606,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                                     .textTheme
                                     .bodyMedium!
                                     .copyWith(
-                                      color: textColor.withOpacity(0.8),
+                                      color: textColor.withValues(alpha: 0.8),
                                     ),
                               ),
                             ],
@@ -618,7 +619,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                             'Range: ${parameter.referenceRangeMin} - ${parameter.referenceRangeMax}',
                             style:
                                 Theme.of(context).textTheme.bodySmall!.copyWith(
-                                      color: textColor.withOpacity(0.7),
+                                      color: textColor.withValues(alpha: 0.7),
                                     ),
                           ),
                         ],
@@ -638,9 +639,13 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                       ),
                       const SizedBox(height: AppTheme.spacing8),
                       Icon(
-                        Icons.trending_up,
+                        status == 'high'
+                            ? Icons.arrow_upward
+                            : status == 'low'
+                                ? Icons.arrow_downward
+                                : Icons.check,
                         size: 20,
-                        color: textColor.withOpacity(0.6),
+                        color: textColor.withValues(alpha: 0.6),
                       ),
                     ],
                   ),
@@ -900,7 +905,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
             ],
 
             // Positive Notes
@@ -933,7 +938,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
             ],
 
             // Next Steps
@@ -977,7 +982,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ],
         );
@@ -1137,36 +1142,34 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
               onPressed: () async {
                 debugPrint(
                     '🗑️ Delete button pressed for report ${widget.report.id}');
-                Navigator.pop(context); // Close dialog
+                final messenger = ScaffoldMessenger.of(context);
+                final nav = Navigator.of(context);
+                final profileId = widget.report.profileId;
+                final reportId = widget.report.id!;
+
+                nav.pop(); // Close dialog
 
                 final viewModel = context.read<ReportViewModel>();
                 debugPrint('  Calling deleteReport...');
-                final success = await viewModel.deleteReport(widget.report.id!);
+                final success = await viewModel.deleteReport(reportId);
 
-                if (success && mounted) {
+                if (success) {
                   debugPrint('  ✅ Report deleted successfully');
-                  // Show success message
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Report deleted successfully'),
-                      backgroundColor: Theme.of(context).colorScheme.tertiary,
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Report deleted successfully'),
                     ),
                   );
-                  // Go back to report list
-                  Navigator.pop(context);
+                  nav.pop(); // Go back to report list
 
-                  // Reload reports for the profile
-                  debugPrint(
-                      '  🔄 Reloading reports for profile ${widget.report.profileId}');
-                  await viewModel
-                      .loadReportsForProfile(widget.report.profileId);
-                } else if (mounted) {
+                  debugPrint('  🔄 Reloading reports for profile $profileId');
+                  await viewModel.loadReportsForProfile(profileId);
+                } else {
                   debugPrint('  ❌ Failed to delete report: ${viewModel.error}');
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(
                       content:
                           Text(viewModel.error ?? 'Failed to delete report'),
-                      backgroundColor: Theme.of(context).colorScheme.error,
                     ),
                   );
                 }

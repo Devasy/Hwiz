@@ -7,7 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:Lablens/main.dart';
+import 'package:lablens/main.dart';
 
 void main() {
   testWidgets('LabLens app smoke test', (WidgetTester tester) async {

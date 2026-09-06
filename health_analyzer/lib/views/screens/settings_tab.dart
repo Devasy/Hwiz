@@ -123,7 +123,7 @@ class SettingsTab extends StatelessWidget {
               _buildTile(
                 Icons.info_outline,
                 'App Version',
-                '1.0.0',
+                '1.0.1+1',
               ),
               _buildTile(
                 Icons.code,
@@ -179,11 +179,11 @@ class SettingsTab extends StatelessWidget {
             child: Text(
               title,
               style: AppTheme.labelLarge.copyWith(
-                color: AppTheme.textSecondary,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           ),
-          Container(
+          Material(
             color: context.surfaceColor,
             child: Column(children: children),
           ),
@@ -207,14 +207,16 @@ class SettingsTab extends StatelessWidget {
         ),
         title: Text(
           title,
-          style: AppTheme.bodyLarge.copyWith(
-            color: isDestructive ? AppTheme.errorColor : AppTheme.textPrimary,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: isDestructive ? AppTheme.errorColor : Theme.of(context).colorScheme.onSurface,
           ),
         ),
         subtitle: subtitle != null
             ? Text(
                 subtitle,
-                style: AppTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               )
             : null,
         trailing: onTap != null ? const Icon(Icons.chevron_right) : null,
@@ -511,7 +513,7 @@ class SettingsTab extends StatelessWidget {
                           'Full Stack Developer',
                           style: TextStyle(
                             fontSize: 12,
-                            color: context.onSurfaceColor.withOpacity(0.7),
+                            color: context.onSurfaceColor.withValues(alpha: 0.7),
                           ),
                         ),
                       ],

@@ -118,7 +118,9 @@ class _AppDrawerState extends State<AppDrawer>
               },
             ),
 
-            const Spacer(),
+            const SizedBox(height: 24),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
 
             // App Info Footer
             _buildAppInfo(context),

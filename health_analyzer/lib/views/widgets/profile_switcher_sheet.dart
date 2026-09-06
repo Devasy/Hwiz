@@ -43,7 +43,9 @@ class ProfileSwitcherSheet extends StatelessWidget {
                 children: [
                   Text(
                     'Switch Profile',
-                    style: AppTheme.headingSmall,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const Spacer(),
                   IconButton(
@@ -68,9 +70,9 @@ class ProfileSwitcherSheet extends StatelessWidget {
                         children: [
                           Text(
                             'No profiles yet',
-                            style: AppTheme.bodyLarge.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
                           ),
                           const SizedBox(height: AppTheme.spacing16),
                           // Material 3 FilledButton for primary action
@@ -107,7 +109,9 @@ class ProfileSwitcherSheet extends StatelessWidget {
                         ),
                         title: Text(
                           profile.name,
-                          style: AppTheme.titleMedium,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                         subtitle: Text(
                           [
@@ -115,7 +119,9 @@ class ProfileSwitcherSheet extends StatelessWidget {
                             if (profile.relationship != null)
                               profile.relationship!,
                           ].join(' • '),
-                          style: AppTheme.bodySmall,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
                         ),
                         trailing: isSelected
                             ? Icon(

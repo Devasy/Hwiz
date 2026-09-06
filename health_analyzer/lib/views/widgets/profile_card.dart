@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../models/profile.dart';
 
@@ -45,10 +46,12 @@ class ProfileCard extends StatelessWidget {
                 child: CircleAvatar(
                   radius: 32,
                   backgroundColor: _getAvatarColor(context),
-                  backgroundImage: profile.photoPath != null
-                      ? AssetImage(profile.photoPath!)
+                  backgroundImage: profile.photoPath != null &&
+                          File(profile.photoPath!).existsSync()
+                      ? FileImage(File(profile.photoPath!))
                       : null,
-                  child: profile.photoPath == null
+                  child: (profile.photoPath == null ||
+                          !File(profile.photoPath!).existsSync())
                       ? Text(
                           profile.name[0].toUpperCase(),
                           style: TextStyle(
@@ -86,7 +89,7 @@ class ProfileCard extends StatelessWidget {
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
-                                .withOpacity(0.6),
+                                .withValues(alpha: 0.6),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -98,7 +101,7 @@ class ProfileCard extends StatelessWidget {
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
-                                      .withOpacity(0.6),
+                                      .withValues(alpha: 0.6),
                                 ),
                           ),
                         ],
@@ -114,7 +117,7 @@ class ProfileCard extends StatelessWidget {
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
-                                      .withOpacity(0.6),
+                                      .withValues(alpha: 0.6),
                                 ),
                           ),
                           const SizedBox(width: 8),
@@ -129,7 +132,7 @@ class ProfileCard extends StatelessWidget {
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
-                                      .withOpacity(0.6),
+                                      .withValues(alpha: 0.6),
                                 ),
                           ),
                       ],

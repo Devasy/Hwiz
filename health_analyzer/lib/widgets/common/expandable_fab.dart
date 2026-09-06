@@ -113,14 +113,20 @@ class _ExpandableFabState extends State<ExpandableFab>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final totalHeight = widget.actions.length * 50.0 + 90;
 
-    return SizedBox(
-      width: 180,
-      height: widget.actions.length * 50.0 + 90,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          return Stack(
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final progress = _expandAnimation.value;
+        final currentWidth = 56.0 + (180.0 - 56.0) * progress;
+        final currentHeight = 56.0 + (totalHeight - 56.0) * progress;
+
+        return SizedBox(
+          width: currentWidth,
+          height: currentHeight,
+          child: Stack(
+            clipBehavior: Clip.none,
             alignment: Alignment.bottomRight,
             children: [
               // Transparent overlay to detect taps outside when expanded
@@ -159,8 +165,8 @@ class _ExpandableFabState extends State<ExpandableFab>
                             borderRadius: BorderRadius.circular(22),
                             color: action.backgroundColor ??
                                 theme.colorScheme.secondaryContainer,
-                            shadowColor: theme.colorScheme.shadow.withOpacity(
-                              0.4,
+                            shadowColor: theme.colorScheme.shadow.withValues(
+                              alpha: 0.4,
                             ),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(22),
@@ -245,9 +251,9 @@ class _ExpandableFabState extends State<ExpandableFab>
                 ),
               ),
             ],
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }

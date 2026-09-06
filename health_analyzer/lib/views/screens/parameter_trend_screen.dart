@@ -214,7 +214,7 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
             Icon(
               Icons.show_chart,
               size: 100,
-              color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 24),
             Text(
@@ -228,7 +228,7 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
-                        .withOpacity(0.6),
+                        .withValues(alpha: 0.6),
                   ),
               textAlign: TextAlign.center,
             ),
@@ -265,7 +265,7 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: DropdownButtonFormField<String>(
-            value: _selectedParameter,
+            initialValue: _selectedParameter,
             decoration: const InputDecoration(
               labelText: 'Select Parameter',
               border: InputBorder.none,
@@ -336,7 +336,7 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
             Icon(
               Icons.timeline,
               size: 80,
-              color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 16),
             Text(
@@ -350,7 +350,7 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
-                        .withOpacity(0.6),
+                        .withValues(alpha: 0.6),
                   ),
               textAlign: TextAlign.center,
             ),
@@ -386,7 +386,7 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
-                          .withOpacity(0.6),
+                          .withValues(alpha: 0.6),
                     ),
               ),
               const SizedBox(height: 24),
@@ -453,13 +453,13 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
               ((chartMaxY - chartMinY) / 5).clamp(0.1, double.infinity),
           getDrawingHorizontalLine: (value) {
             return FlLine(
-              color: Colors.grey[300],
+              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
               strokeWidth: 1,
             );
           },
           getDrawingVerticalLine: (value) {
             return FlLine(
-              color: Colors.grey[300],
+              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
               strokeWidth: 1,
             );
           },
@@ -478,7 +478,10 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
                     DateFormat('MMM\ndd').format(dates[index]),
-                    style: const TextStyle(fontSize: 10),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 );
@@ -492,7 +495,10 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
               getTitlesWidget: (value, meta) {
                 return Text(
                   value.toStringAsFixed(1),
-                  style: const TextStyle(fontSize: 10),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 );
               },
             ),
@@ -506,7 +512,9 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
         ),
         borderData: FlBorderData(
           show: true,
-          border: Border.all(color: Colors.grey[300]!),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          ),
         ),
         lineBarsData: [
           LineChartBarData(
@@ -536,7 +544,7 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
             ),
             belowBarData: BarAreaData(
               show: true,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             ),
           ),
         ],
@@ -545,7 +553,7 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
                 horizontalLines: [
                   HorizontalLine(
                     y: refMin.toDouble(),
-                    color: Colors.orange.withOpacity(0.5),
+                    color: Colors.orange.withValues(alpha: 0.5),
                     strokeWidth: 2,
                     dashArray: [5, 5],
                     label: HorizontalLineLabel(
@@ -560,7 +568,7 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
                   ),
                   HorizontalLine(
                     y: refMax.toDouble(),
-                    color: Colors.orange.withOpacity(0.5),
+                    color: Colors.orange.withValues(alpha: 0.5),
                     strokeWidth: 2,
                     dashArray: [5, 5],
                     label: HorizontalLineLabel(
@@ -578,7 +586,10 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
             : null,
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (touchedSpot) =>
+                Theme.of(context).colorScheme.surfaceContainerHighest,
             getTooltipItems: (touchedSpots) {
+              final onSurface = Theme.of(context).colorScheme.onSurface;
               return touchedSpots.map((spot) {
                 final index = spot.x.toInt();
                 final date = dates[index];
@@ -587,15 +598,15 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
 
                 return LineTooltipItem(
                   '${DateFormat('MMM dd, yyyy').format(date)}\n',
-                  const TextStyle(
-                    color: Colors.white,
+                  TextStyle(
+                    color: onSurface,
                     fontWeight: FontWeight.bold,
                   ),
                   children: [
                     TextSpan(
                       text: '${value.toStringAsFixed(2)} $unit',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: onSurface,
                         fontSize: 14,
                       ),
                     ),
@@ -658,34 +669,34 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isTrendUp
-                      ? Colors.green.withOpacity(0.1)
-                      : Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      isTrendUp ? Icons.trending_up : Icons.trending_down,
-                      color: isTrendUp ? Colors.green : Colors.red,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Trend: ${trendPercent.abs().toStringAsFixed(1)}% ${isTrendUp ? 'increase' : 'decrease'}',
-                      style: TextStyle(
-                        color: isTrendUp ? Colors.green : Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : Colors.red.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
               ),
-            ],
-          ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isTrendUp ? Icons.trending_up : Icons.trending_down,
+                    color: isTrendUp ? Colors.green : Colors.red,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Trend: ${trendPercent.abs().toStringAsFixed(1)}% ${isTrendUp ? 'increase' : 'decrease'}',
+                    style: TextStyle(
+                      color: isTrendUp ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildStatItem(String label, double value, String unit, Color color) {
     return Column(
@@ -693,7 +704,7 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
         ),
         const SizedBox(height: 4),
@@ -788,7 +799,7 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppTheme.textSecondary.withOpacity(0.3),
+                    color: AppTheme.textSecondary.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -1067,13 +1078,18 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
     final regex = RegExp(r'\*\*(.+?)\*\*');
     int lastIndex = 0;
 
+    final textStyle = AppTheme.bodyMedium.copyWith(
+      color: Theme.of(context).colorScheme.onSurface,
+      height: 1.6,
+    );
+
     for (final match in regex.allMatches(text)) {
       // Add normal text before the bold text
       if (match.start > lastIndex) {
         spans.add(
           TextSpan(
             text: text.substring(lastIndex, match.start),
-            style: AppTheme.bodyMedium.copyWith(height: 1.6),
+            style: textStyle,
           ),
         );
       }
@@ -1082,9 +1098,8 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
       spans.add(
         TextSpan(
           text: match.group(1),
-          style: AppTheme.bodyMedium.copyWith(
+          style: textStyle.copyWith(
             fontWeight: FontWeight.bold,
-            height: 1.6,
           ),
         ),
       );
@@ -1097,7 +1112,7 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
       spans.add(
         TextSpan(
           text: text.substring(lastIndex),
-          style: AppTheme.bodyMedium.copyWith(height: 1.6),
+          style: textStyle,
         ),
       );
     }
@@ -1108,7 +1123,7 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
             ? [
                 TextSpan(
                     text: text,
-                    style: AppTheme.bodyMedium.copyWith(height: 1.6))
+                    style: textStyle)
               ]
             : spans,
       ),

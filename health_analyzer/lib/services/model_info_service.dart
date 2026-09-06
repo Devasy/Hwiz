@@ -118,21 +118,21 @@ class ModelInfoService {
   bool _isRecommended(String modelId) {
     return (modelId.contains('flash') || modelId.contains('pro')) &&
         !modelId.contains('exp') &&
-        !modelId.contains('vision') &&
-        modelId.contains('1.5');
+        !modelId.contains('vision');
   }
 
   String _estimateSpeed(String modelId) {
-    if (modelId.contains('flash-8b')) return 'Fastest';
+    if (modelId.contains('3.8') || modelId.contains('flash-8b')) return 'Fastest';
     if (modelId.contains('flash')) return 'Very Fast';
     if (modelId.contains('pro')) return 'Fast';
     return 'Medium';
   }
 
   String _estimateQuality(String modelId) {
-    if (modelId.contains('pro')) return 'Best';
-    if (modelId.contains('flash') && !modelId.contains('8b'))
+    if (modelId.contains('3.8') || modelId.contains('pro')) return 'Best';
+    if (modelId.contains('flash') && !modelId.contains('8b')) {
       return 'Excellent';
+    }
     return 'Good';
   }
 
@@ -148,11 +148,23 @@ class ModelInfoService {
   /// Updated regularly to reflect latest available models
   Map<String, ModelDisplayInfo> getModelDisplayInfo() {
     return {
-      // Gemini 2.0 Models (Latest - December 2024)
-      'gemini-2.0-flash-exp': ModelDisplayInfo(
-        name: 'Gemini 2.0 Flash (Experimental)',
+      // Gemini 3.8 Models (Latest Generation)
+      'gemini-3.8-flash': ModelDisplayInfo(
+        name: 'Gemini 3.8 Flash',
         description:
-            '🆕 Latest experimental model with enhanced multimodal capabilities. Best for cutting-edge OCR tasks.',
+            '🚀 Latest state-of-the-art multimodal model with next-gen speed, exceptional reasoning, and ultra-accurate medical data extraction.',
+        recommended: true,
+        speed: 'Fastest',
+        quality: 'Best',
+        inputTokenLimit: 1048576,
+        outputTokenLimit: 8192,
+      ),
+
+      // Gemini 2.5 Models (Current Default)
+      'gemini-2.5-flash': ModelDisplayInfo(
+        name: 'Gemini 2.5 Flash',
+        description:
+            '⚡ Default reliable workhorse model. Fast and accurate OCR for blood reports and medical records.',
         recommended: true,
         speed: 'Very Fast',
         quality: 'Excellent',
@@ -160,14 +172,26 @@ class ModelInfoService {
         outputTokenLimit: 8192,
       ),
 
-      // Gemini 1.5 Models (Stable - Production Ready)
+      // Gemini 2.0 Models
+      'gemini-2.0-flash-exp': ModelDisplayInfo(
+        name: 'Gemini 2.0 Flash (Experimental)',
+        description:
+            '🆕 Experimental model with multimodal capabilities for medical document scanning.',
+        recommended: false,
+        speed: 'Very Fast',
+        quality: 'Excellent',
+        inputTokenLimit: 1048576,
+        outputTokenLimit: 8192,
+      ),
+
+      // Gemini 1.5 Models (Stable - Legacy)
       'gemini-1.5-flash': ModelDisplayInfo(
         name: 'Gemini 1.5 Flash',
         description:
-            '⚡ Fast and efficient, perfect for OCR and vision tasks. Best balance of speed and quality for medical documents.',
-        recommended: true,
+            '⚡ Fast and efficient baseline model for OCR and document processing.',
+        recommended: false,
         speed: 'Very Fast',
-        quality: 'Excellent',
+        quality: 'Good',
         inputTokenLimit: 1048576,
         outputTokenLimit: 8192,
       ),
@@ -175,10 +199,10 @@ class ModelInfoService {
       'gemini-1.5-flash-8b': ModelDisplayInfo(
         name: 'Gemini 1.5 Flash 8B',
         description:
-            '🚀 Smallest, fastest model. Good for quick OCR tasks with simpler documents.',
+            'Smallest, lightweight model for quick OCR tasks with simple documents.',
         recommended: false,
         speed: 'Fastest',
-        quality: 'Very Good',
+        quality: 'Good',
         inputTokenLimit: 1048576,
         outputTokenLimit: 8192,
       ),
@@ -186,18 +210,7 @@ class ModelInfoService {
       'gemini-1.5-pro': ModelDisplayInfo(
         name: 'Gemini 1.5 Pro',
         description:
-            '⭐ Most capable model with highest accuracy. Best for complex medical documents with multiple parameters.',
-        recommended: true,
-        speed: 'Fast',
-        quality: 'Best',
-        inputTokenLimit: 2097152,
-        outputTokenLimit: 8192,
-      ),
-
-      'gemini-1.5-pro-exp': ModelDisplayInfo(
-        name: 'Gemini 1.5 Pro (Experimental)',
-        description:
-            '🔬 Experimental Pro version with latest improvements. Higher quality but may be less stable.',
+            'Capable model for complex medical documents with high token capacity.',
         recommended: false,
         speed: 'Fast',
         quality: 'Best',
@@ -205,11 +218,11 @@ class ModelInfoService {
         outputTokenLimit: 8192,
       ),
 
-      // Legacy models (for backwards compatibility)
+      // Legacy models
       'gemini-pro-vision': ModelDisplayInfo(
         name: 'Gemini Pro Vision (Legacy)',
         description:
-            '📜 Legacy vision model. Consider upgrading to Gemini 1.5 Flash for better performance.',
+            '📜 Legacy vision model. Consider upgrading to Gemini 2.5 Flash or 3.8 Flash.',
         recommended: false,
         speed: 'Medium',
         quality: 'Good',
@@ -222,15 +235,16 @@ class ModelInfoService {
   /// Get recommended models specifically for OCR/Vision tasks
   List<String> getRecommendedModelsForOCR() {
     return [
-      'gemini-2.0-flash-exp', // Latest
-      'gemini-1.5-flash', // Best balance
-      'gemini-1.5-pro', // Highest quality
+      'gemini-3.8-flash', // Latest recommended
+      'gemini-2.5-flash', // Default workhorse
+      'gemini-2.0-flash-exp',
+      'gemini-1.5-flash',
     ];
   }
 
   /// Get the default model (most reliable and balanced)
   String getDefaultModel() {
-    return 'gemini-1.5-flash';
+    return 'gemini-2.5-flash';
   }
 
   /// Get information about model updates

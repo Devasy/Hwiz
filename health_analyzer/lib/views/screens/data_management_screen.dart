@@ -154,7 +154,7 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
                     children: [
                       Icon(
                         Icons.info_outline,
-                        color: context.onSurfaceColor.withOpacity(0.6),
+                        color: context.onSurfaceColor.withValues(alpha: 0.6),
                         size: 20,
                       ),
                       const SizedBox(width: AppTheme.spacing8),
@@ -227,20 +227,20 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
         icon,
         color: onTap != null
             ? context.primaryColor
-            : context.onSurfaceColor.withOpacity(0.3),
+            : context.onSurfaceColor.withValues(alpha: 0.3),
       ),
       title: Text(
         title,
         style: AppTheme.titleSmall.copyWith(
           color: onTap != null
               ? context.onSurfaceColor
-              : context.onSurfaceColor.withOpacity(0.5),
+              : context.onSurfaceColor.withValues(alpha: 0.5),
         ),
       ),
       subtitle: Text(
         subtitle,
         style: AppTheme.bodySmall.copyWith(
-          color: context.onSurfaceColor.withOpacity(0.6),
+          color: context.onSurfaceColor.withValues(alpha: 0.6),
         ),
       ),
       trailing: onTap != null
@@ -258,7 +258,7 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
         Text(
           '• ',
           style: AppTheme.bodyMedium.copyWith(
-            color: context.onSurfaceColor.withOpacity(0.6),
+            color: context.onSurfaceColor.withValues(alpha: 0.6),
           ),
         ),
         Expanded(
@@ -275,7 +275,7 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
                 TextSpan(
                   text: description,
                   style: AppTheme.bodyMedium.copyWith(
-                    color: context.onSurfaceColor.withOpacity(0.6),
+                    color: context.onSurfaceColor.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -556,7 +556,12 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Select Report', style: AppTheme.headingSmall),
+            Text(
+              'Select Report',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
             const SizedBox(height: AppTheme.spacing16),
             ...reports.map((report) {
               return ListTile(
