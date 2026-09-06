@@ -123,7 +123,7 @@ class SettingsTab extends StatelessWidget {
               _buildTile(
                 Icons.info_outline,
                 'App Version',
-                '1.0.1+1',
+                '1.0.2+2',
               ),
               _buildTile(
                 Icons.code,
