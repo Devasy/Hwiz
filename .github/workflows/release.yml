@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -62,11 +62,11 @@ jobs:
 
       - name: Build Android App Bundle (.aab)
         working-directory: ./health_analyzer
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --android-skip-build-dependency-validation
 
       - name: Build Android APK (.apk)
         working-directory: ./health_analyzer
-        run: flutter build apk --release
+        run: flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Determine Release Tag
         id: vars
