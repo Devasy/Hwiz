@@ -106,10 +106,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload to Google Play (Optional)
-        if: env.PLAY_STORE_JSON_KEY != ''
+        if: ${{ secrets.PLAY_STORE_JSON_KEY != '' }}
         uses: r0adkll/upload-google-play@v1
-        env:
-          PLAY_STORE_JSON_KEY: ${{ secrets.PLAY_STORE_JSON_KEY }}
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_JSON_KEY }}
           packageName: com.devasy.lablens
