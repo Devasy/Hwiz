@@ -106,11 +106,13 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
         );
       }
 
+      if (!mounted) return;
       setState(() {
         _aiInsights = insights;
         _loadingAiInsights = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _aiError = e.toString();
         _loadingAiInsights = false;

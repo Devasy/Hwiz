@@ -730,13 +730,15 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
         .join(' ');
   }
 
-  Future<void> _loadTrendAnalysis() async {
-    if (_selectedParameter == null || _trendData.isEmpty) return;
+  Future<void> _loadTrendAnalysis([StateSetter? setModalState]) async {
+    if (_selectedParameter == null) return;
 
+    if (!mounted) return;
     setState(() {
       _loadingAnalysis = true;
       _analysisError = null;
     });
+    setModalState?.call(() {});
 
     try {
       // Prepare historical data
@@ -756,230 +758,244 @@ class _ParameterTrendScreenState extends State<ParameterTrendScreen> {
         currentStatus: _currentStatus,
       );
 
+      if (!mounted) return;
       setState(() {
         _trendAnalysis = analysis;
         _loadingAnalysis = false;
       });
+      setModalState?.call(() {});
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _analysisError = e.toString();
         _loadingAnalysis = false;
       });
+      setModalState?.call(() {});
     }
   }
 
   void _showTrendAnalysisSheet() {
-    // Load analysis if not already loaded
-    if (_trendAnalysis == null && !_loadingAnalysis) {
-      _loadTrendAnalysis();
-    }
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.9,
-        minChildSize: 0.5,
-        builder: (context, scrollController) {
-          return Container(
-            decoration: BoxDecoration(
-              color: context.surfaceColor,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(AppTheme.radiusLarge),
-                topRight: Radius.circular(AppTheme.radiusLarge),
-              ),
-            ),
-            child: Column(
-              children: [
-                // Handle bar
-                Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 8),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppTheme.textSecondary.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          if (_trendAnalysis == null &&
+              !_loadingAnalysis &&
+              _analysisError == null) {
+            _loadTrendAnalysis(setModalState);
+          }
+          return DraggableScrollableSheet(
+            initialChildSize: 0.7,
+            maxChildSize: 0.9,
+            minChildSize: 0.5,
+            builder: (context, scrollController) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: context.surfaceColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(AppTheme.radiusLarge),
+                    topRight: Radius.circular(AppTheme.radiusLarge),
                   ),
                 ),
-
-                // Header
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.insights,
-                        color: AppTheme.infoColor,
+                child: Column(
+                  children: [
+                    // Handle bar
+                    Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppTheme.textSecondary.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'AI Trend Analysis',
-                              style: AppTheme.titleLarge.copyWith(
-                                color: AppTheme.infoColor,
-                              ),
-                            ),
-                            Text(
-                              _formatParameterName(_selectedParameter ?? ''),
-                              style: AppTheme.bodySmall.copyWith(
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (_trendAnalysis != null)
-                        IconButton(
-                          icon: const Icon(Icons.refresh, size: 20),
-                          onPressed: () {
-                            setState(() {
-                              _trendAnalysis = null;
-                            });
-                            _loadTrendAnalysis();
-                          },
-                          tooltip: 'Regenerate analysis',
-                        ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
 
-                const Divider(height: 1),
-
-                // Content
-                Expanded(
-                  child: StatefulBuilder(
-                    builder: (context, setModalState) {
-                      if (_loadingAnalysis) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const CircularProgressIndicator(),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Analyzing trend pattern...',
-                                style: AppTheme.bodyMedium.copyWith(
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                            ],
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.insights,
+                            color: AppTheme.infoColor,
                           ),
-                        );
-                      }
-
-                      if (_analysisError != null) {
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(32),
+                          const SizedBox(width: 12),
+                          Expanded(
                             child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(
-                                  Icons.error_outline,
-                                  color: AppTheme.errorColor,
-                                  size: 64,
-                                ),
-                                const SizedBox(height: 16),
                                 Text(
-                                  'Failed to generate analysis',
-                                  style: AppTheme.titleMedium,
-                                  textAlign: TextAlign.center,
+                                  'AI Trend Analysis',
+                                  style: AppTheme.titleLarge.copyWith(
+                                    color: AppTheme.infoColor,
+                                  ),
                                 ),
-                                const SizedBox(height: 8),
                                 Text(
-                                  _analysisError!.contains('API key')
-                                      ? 'Please check your Gemini API key in settings'
-                                      : 'Please try again later',
+                                  _formatParameterName(_selectedParameter ?? ''),
                                   style: AppTheme.bodySmall.copyWith(
                                     color: AppTheme.textSecondary,
                                   ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 24),
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    setState(() {
-                                      _analysisError = null;
-                                    });
-                                    _loadTrendAnalysis();
-                                  },
-                                  icon: const Icon(Icons.refresh),
-                                  label: const Text('Retry'),
                                 ),
                               ],
                             ),
                           ),
-                        );
-                      }
-
-                      if (_trendAnalysis != null) {
-                        return SingleChildScrollView(
-                          controller: scrollController,
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Analysis content - formatted
-                              _buildFormattedAnalysis(_trendAnalysis!),
-                              const SizedBox(height: 24),
-
-                              // Disclaimer
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.warningLight,
-                                  borderRadius: BorderRadius.circular(
-                                    AppTheme.radiusMedium,
-                                  ),
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Icon(
-                                      Icons.info_outline,
-                                      size: 20,
-                                      color: AppTheme.warningColor,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        'This is AI-generated information for educational purposes only. Always consult qualified healthcare professionals for medical advice.',
-                                        style: AppTheme.bodySmall.copyWith(
-                                          color: AppTheme.warningColor,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                          if (_trendAnalysis != null)
+                            IconButton(
+                              icon: const Icon(Icons.refresh, size: 20),
+                              onPressed: () {
+                                setState(() {
+                                  _trendAnalysis = null;
+                                });
+                                _loadTrendAnalysis(setModalState);
+                              },
+                              tooltip: 'Regenerate analysis',
+                            ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context),
                           ),
-                        );
-                      }
+                        ],
+                      ),
+                    ),
 
-                      return Center(
-                        child: TextButton.icon(
-                          onPressed: _loadTrendAnalysis,
-                          icon: const Icon(Icons.auto_awesome),
-                          label: const Text('Generate Analysis'),
-                        ),
-                      );
-                    },
-                  ),
+                    const Divider(height: 1),
+
+                    // Content
+                    Expanded(
+                      child: _buildAnalysisModalContent(
+                        scrollController,
+                        setModalState,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildAnalysisModalContent(
+    ScrollController scrollController,
+    StateSetter setModalState,
+  ) {
+    if (_loadingAnalysis) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Analyzing trend pattern...',
+              style: AppTheme.bodyMedium.copyWith(
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_analysisError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: AppTheme.errorColor,
+                size: 64,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Failed to generate analysis',
+                style: AppTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _analysisError!.contains('API key')
+                    ? 'Please check your Gemini API key in settings'
+                    : 'Please try again later',
+                style: AppTheme.bodySmall.copyWith(
+                  color: AppTheme.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _analysisError = null;
+                  });
+                  _loadTrendAnalysis(setModalState);
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_trendAnalysis != null) {
+      return SingleChildScrollView(
+        controller: scrollController,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Analysis content - formatted
+            _buildFormattedAnalysis(_trendAnalysis!),
+            const SizedBox(height: 24),
+
+            // Disclaimer
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.warningLight,
+                borderRadius: BorderRadius.circular(
+                  AppTheme.radiusMedium,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    size: 20,
+                    color: AppTheme.warningColor,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'This is AI-generated information for educational purposes only. Always consult qualified healthcare professionals for medical advice.',
+                      style: AppTheme.bodySmall.copyWith(
+                        color: AppTheme.warningColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Center(
+      child: TextButton.icon(
+        onPressed: () => _loadTrendAnalysis(setModalState),
+        icon: const Icon(Icons.auto_awesome),
+        label: const Text('Generate Analysis'),
       ),
     );
   }

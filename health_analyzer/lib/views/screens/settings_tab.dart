@@ -76,13 +76,11 @@ class SettingsTab extends StatelessWidget {
                 },
               ),
               _buildTile(
-                Icons.delete_forever,
-                'Clear All Data',
-                'Delete all profiles and reports',
-                onTap: () {
-                  _showClearDataDialog(context);
-                },
-                isDestructive: true,
+                Icons.delete_outline,
+                'Clear All Data (Coming Soon)',
+                'Feature under development',
+                onTap: null,
+                isDestructive: false,
               ),
             ],
           ),
@@ -304,40 +302,6 @@ class SettingsTab extends StatelessWidget {
     return luminance > 0.5 ? Colors.black : Colors.white;
   }
 
-  void _showClearDataDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear All Data?'),
-        content: const Text(
-          'This will permanently delete all profiles and blood reports. '
-          'This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Clear data feature coming soon!'),
-                  backgroundColor: Theme.of(context).colorScheme.secondary,
-                ),
-              );
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: AppTheme.errorColor,
-            ),
-            child: const Text('Clear All'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showTutorialDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -383,16 +347,16 @@ class SettingsTab extends StatelessWidget {
           child: Text(
             'LabLens Privacy Policy\n\n'
             '1. Data Storage\n'
-            'All your health data is stored locally on your device. '
-            'We never upload your blood reports or health information to any server.\n\n'
-            '2. API Key\n'
-            'Your Gemini API key is stored securely using platform-specific encryption. '
-            'It is only used to analyze blood reports via Google\'s Gemini AI.\n\n'
-            '3. Third-Party Services\n'
-            'We use Google Gemini AI API for OCR and health analysis. '
-            'Images are sent to Gemini only during report scanning.\n\n'
+            'All your health records and profiles are stored locally in SQLite on your device. '
+            'We do not operate backend servers that store your medical information.\n\n'
+            '2. API Key & Security\n'
+            'Your Gemini API key is stored securely using Android EncryptedSharedPreferences (KeyStore). '
+            'It is only used to communicate with Google\'s Gemini API.\n\n'
+            '3. Third-Party Services (AI Processing)\n'
+            'When you scan a blood report or request AI insights, selected report files and biomarker parameters '
+            'are sent directly to Google Gemini API for extraction and analysis.\n\n'
             '4. Data Ownership\n'
-            'You own all your data. You can export or delete it at any time.\n\n'
+            'You own all your data. You can export your data to CSV/JSON at any time.\n\n'
             '5. No Analytics\n'
             'We do not collect usage analytics or personal information.\n\n'
             '6. Security\n'

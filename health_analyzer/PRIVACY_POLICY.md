@@ -10,7 +10,7 @@
 
 LabLens is designed with privacy as a foundational principle:
 - **No Account Required:** You do not need to create an account or provide personal contact information (e.g., email or phone number) to use the app.
-- **On-Device Storage:** All profiles, blood test reports, and historical parameter trends are stored locally on your device in an encrypted/private SQLite database.
+- **On-Device Storage:** All profiles, blood test reports, and historical parameter trends are stored locally on your device in the application's private SQLite sandbox. When you choose to run AI extraction or insights, selected document images and parameters are transmitted securely via HTTPS directly to Google's Gemini API.
 - **No Developer Servers:** We do not operate external servers that collect, store, or sell your health data.
 - **No Third-Party Analytics or Ads:** The app contains no third-party trackers, telemetry, or advertising frameworks.
 
@@ -19,13 +19,15 @@ LabLens is designed with privacy as a foundational principle:
 ## 2. Information We Handle
 
 ### A. Health & Profile Data (Stored Locally)
+
 - **Profile Details:** Name, optional date of birth, optional gender, and local profile photo.
 - **Blood Test Documents:** Images and PDF reports that you choose to scan or import.
 - **Medical Parameters:** Extracted test names, numeric values, units, and reference ranges.
 
-*All profile and health data resides exclusively on your device unless you explicitly export it using the app's backup or export features.*
+*All profile and health data resides locally on your device in the application sandbox, with the exception of on-demand transmissions to Google's Gemini API when you initiate AI report extraction or trend analysis.*
 
 ### B. Device Permissions
+
 - **Camera / Photo Library / File Storage:** Used exclusively to select, capture, or import lab reports and profile photos chosen by you.
 - **Internet Access:** Used solely to communicate with Google's Gemini API for OCR and report extraction when an API key is configured.
 

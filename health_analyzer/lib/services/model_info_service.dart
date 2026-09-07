@@ -157,7 +157,7 @@ class ModelInfoService {
         speed: 'Fastest',
         quality: 'Best',
         inputTokenLimit: 1048576,
-        outputTokenLimit: 8192,
+        outputTokenLimit: 65536,
       ),
 
       // Gemini 2.5 Models (Current Default)
@@ -169,65 +169,7 @@ class ModelInfoService {
         speed: 'Very Fast',
         quality: 'Excellent',
         inputTokenLimit: 1048576,
-        outputTokenLimit: 8192,
-      ),
-
-      // Gemini 2.0 Models
-      'gemini-2.0-flash-exp': ModelDisplayInfo(
-        name: 'Gemini 2.0 Flash (Experimental)',
-        description:
-            '🆕 Experimental model with multimodal capabilities for medical document scanning.',
-        recommended: false,
-        speed: 'Very Fast',
-        quality: 'Excellent',
-        inputTokenLimit: 1048576,
-        outputTokenLimit: 8192,
-      ),
-
-      // Gemini 1.5 Models (Stable - Legacy)
-      'gemini-1.5-flash': ModelDisplayInfo(
-        name: 'Gemini 1.5 Flash',
-        description:
-            '⚡ Fast and efficient baseline model for OCR and document processing.',
-        recommended: false,
-        speed: 'Very Fast',
-        quality: 'Good',
-        inputTokenLimit: 1048576,
-        outputTokenLimit: 8192,
-      ),
-
-      'gemini-1.5-flash-8b': ModelDisplayInfo(
-        name: 'Gemini 1.5 Flash 8B',
-        description:
-            'Smallest, lightweight model for quick OCR tasks with simple documents.',
-        recommended: false,
-        speed: 'Fastest',
-        quality: 'Good',
-        inputTokenLimit: 1048576,
-        outputTokenLimit: 8192,
-      ),
-
-      'gemini-1.5-pro': ModelDisplayInfo(
-        name: 'Gemini 1.5 Pro',
-        description:
-            'Capable model for complex medical documents with high token capacity.',
-        recommended: false,
-        speed: 'Fast',
-        quality: 'Best',
-        inputTokenLimit: 2097152,
-        outputTokenLimit: 8192,
-      ),
-
-      // Legacy models
-      'gemini-pro-vision': ModelDisplayInfo(
-        name: 'Gemini Pro Vision (Legacy)',
-        description:
-            '📜 Legacy vision model. Consider upgrading to Gemini 2.5 Flash or 3.8 Flash.',
-        recommended: false,
-        speed: 'Medium',
-        quality: 'Good',
-        inputTokenLimit: 16384,
-        outputTokenLimit: 2048,
+        outputTokenLimit: 65536,
       ),
     };
   }
@@ -237,8 +179,6 @@ class ModelInfoService {
     return [
       'gemini-3.8-flash', // Latest recommended
       'gemini-2.5-flash', // Default workhorse
-      'gemini-2.0-flash-exp',
-      'gemini-1.5-flash',
     ];
   }
 
@@ -247,15 +187,27 @@ class ModelInfoService {
     return 'gemini-2.5-flash';
   }
 
+  /// Check if a model ID is valid and active
+  bool isValidModel(String? modelId) {
+    return modelId != null && getModelDisplayInfo().containsKey(modelId);
+  }
+
+  /// Sanitize model ID, falling back to default if invalid or retired
+  String getSanitizedModel(String? modelId) {
+    if (isValidModel(modelId)) {
+      return modelId!;
+    }
+    return getDefaultModel();
+  }
+
   /// Get information about model updates
   String getModelUpdateInfo() {
     return '''
-Model List Last Updated: October 2025
+Model List Last Updated: 2026
 
-Latest Models:
-• Gemini 2.0 Flash (Experimental) - Released Dec 2024
-• Gemini 1.5 Pro - Stable production model
-• Gemini 1.5 Flash - Recommended for most use cases
+Active Production Models:
+• Gemini 3.8 Flash - Latest multimodal flagship with high precision
+• Gemini 2.5 Flash - High speed production workhorse (Recommended)
 
 For the latest model information, visit:
 https://ai.google.dev/gemini-api/docs/models/gemini

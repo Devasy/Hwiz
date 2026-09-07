@@ -308,18 +308,27 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
           subject: '${profile.name} - Complete Health Data',
         );
 
-        setState(() {
-          _isLoading = false;
-          _statusMessage = 'Profile exported successfully!';
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _statusMessage = 'Profile exported successfully!';
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _statusMessage = 'Export cancelled';
+          });
+        }
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _statusMessage = 'Export failed: $e';
-      });
-
       if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _statusMessage = 'Export failed: $e';
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Export failed: $e')),
         );
@@ -332,6 +341,7 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
     final report = await _showReportPicker(reportVM.reports);
     if (report == null) return;
 
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _statusMessage = 'Exporting report...';
@@ -343,18 +353,27 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
       if (filePath != null) {
         await _exportService.shareFile(filePath);
 
-        setState(() {
-          _isLoading = false;
-          _statusMessage = 'Report exported successfully!';
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _statusMessage = 'Report exported successfully!';
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _statusMessage = 'Export cancelled';
+          });
+        }
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _statusMessage = 'Export failed: $e';
-      });
-
       if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _statusMessage = 'Export failed: $e';
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Export failed: $e')),
         );
@@ -366,6 +385,7 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
     Profile profile,
     ReportViewModel reportVM,
   ) async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _statusMessage = 'Exporting all reports...';
@@ -380,18 +400,27 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
       if (filePath != null) {
         await _exportService.shareFile(filePath);
 
-        setState(() {
-          _isLoading = false;
-          _statusMessage = '${reportVM.reports.length} reports exported!';
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _statusMessage = '${reportVM.reports.length} reports exported!';
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _statusMessage = 'Export cancelled';
+          });
+        }
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _statusMessage = 'Export failed: $e';
-      });
-
       if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _statusMessage = 'Export failed: $e';
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Export failed: $e')),
         );
@@ -458,30 +487,28 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
       // Reload reports
       await reportVM.loadReportsForProfile(createdProfile.id!);
 
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _statusMessage =
             'Imported ${profile.name} with ${reports.length} reports!';
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully imported ${profile.name}!'),
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Successfully imported ${profile.name}!'),
+        ),
+      );
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _statusMessage = 'Import failed: $e';
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Import failed: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Import failed: $e')),
+      );
     }
   }
 
@@ -521,29 +548,27 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
       // Reload reports
       await reportVM.loadReportsForProfile(profile.id!);
 
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _statusMessage = 'Imported ${reports.length} reports!';
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully imported ${reports.length} reports!'),
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Successfully imported ${reports.length} reports!'),
+        ),
+      );
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _statusMessage = 'Import failed: $e';
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Import failed: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Import failed: $e')),
+      );
     }
   }
 

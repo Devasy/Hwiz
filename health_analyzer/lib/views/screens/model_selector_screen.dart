@@ -36,9 +36,12 @@ class _ModelSelectorScreenState extends State<ModelSelectorScreen> {
     });
 
     try {
-      // Get current model
-      _currentModel = await _storage.read(key: 'selected_gemini_model') ??
-          _modelInfoService.getDefaultModel();
+      // Get current model, sanitize against active models
+      final storedModel = await _storage.read(key: 'selected_gemini_model');
+      _currentModel = _modelInfoService.getSanitizedModel(storedModel);
+      if (storedModel != null && storedModel != _currentModel) {
+        await _storage.write(key: 'selected_gemini_model', value: _currentModel);
+      }
       _selectedModel = _currentModel;
 
       // Get API key to fetch available models

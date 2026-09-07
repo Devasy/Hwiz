@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../utils/constants.dart';
 import 'loinc_mapper.dart';
+import 'model_info_service.dart';
 
 /// Gemini Service - Handles OCR and data extraction from blood reports
 class GeminiService {
@@ -21,11 +22,17 @@ class GeminiService {
       throw Exception('Gemini API key not found. Please set it in settings.');
     }
 
-    // Get selected model from storage, default to gemini-2.5-flash
-    final selectedModel = await _secureStorage.read(
-          key: 'selected_gemini_model',
-        ) ??
-        'gemini-2.5-flash';
+    // Get selected model from storage, validate against active models, default to gemini-2.5-flash
+    final storedModel = await _secureStorage.read(
+      key: 'selected_gemini_model',
+    );
+    final selectedModel = ModelInfoService().getSanitizedModel(storedModel);
+    if (storedModel != null && storedModel != selectedModel) {
+      await _secureStorage.write(
+        key: 'selected_gemini_model',
+        value: selectedModel,
+      );
+    }
 
     _model = GenerativeModel(model: selectedModel, apiKey: apiKey);
   }

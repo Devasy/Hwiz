@@ -6,7 +6,7 @@ Use this document to copy-paste directly into your Google Play Developer Console
 
 ## 1. App Details
 
-- **App Name:** LabLens - Blood Report Analyzer
+- **App Name:** LabLens - Blood Reports
 - **Short Description (max 80 chars):**
   > AI-powered blood test analyzer, parameter tracker & health trend visualizer.
 - **Category:** Medical or Health & Fitness
@@ -87,9 +87,9 @@ LabLens is designed solely for informational, organizational, and personal refer
 - **Children's Policy:** *Does not appeal to children.*
 
 ### Data Safety Form
-- **Does your app collect or share user data?** -> *Yes* (only technical API transit for AI extraction).
+- **Does your app collect or share user data?** -> *Yes* (transit to Google Gemini API for AI extraction).
 - **Data Types Transferred:**
-  - *Health Info / Photos / Files*: Ephemeral transit to Google Gemini API using user-provided API key for OCR.
-  - *Collected by developer?* -> **No**. Data is stored only locally on user's device.
+  - *Health Info / Photos / Files*: Sent to Google Gemini API using user-configured API key for OCR report extraction and health insight generation.
+  - *Collected by developer?* -> **No**. Developer does not operate servers or collect personal data; reports and profiles remain stored locally on user's device.
   - *Data encrypted in transit?* -> **Yes** (HTTPS to Google API).
-  - *Account deletion?* -> Not applicable (no user accounts created).
+  - *Account deletion?* -> Not applicable (no user accounts created; data can be deleted anytime on device).

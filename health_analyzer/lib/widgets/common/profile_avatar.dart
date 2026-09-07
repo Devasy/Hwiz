@@ -17,7 +17,7 @@ class ProfileAvatar extends StatelessWidget {
   });
 
   String _getInitials(String name) {
-    final parts = name.trim().split(' ');
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) {
       return parts[0].substring(0, 1).toUpperCase();

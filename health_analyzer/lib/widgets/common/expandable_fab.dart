@@ -29,7 +29,7 @@ class ExpandableFab extends StatefulWidget {
     this.child,
     this.backgroundColor,
     this.foregroundColor,
-    this.distance = 100.0,
+    this.distance = 50.0,
     this.animationDuration = const Duration(milliseconds: 300),
   });
 
@@ -113,7 +113,7 @@ class _ExpandableFabState extends State<ExpandableFab>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final totalHeight = widget.actions.length * 50.0 + 90;
+    final totalHeight = widget.actions.length * widget.distance + 90;
 
     return AnimatedBuilder(
       animation: _controller,
@@ -146,7 +146,7 @@ class _ExpandableFabState extends State<ExpandableFab>
                 final action = entry.value;
 
                 // Calculate position: expand upward and slightly left
-                final double spacing = 50.0;
+                final double spacing = widget.distance;
                 final double yOffset = -spacing * (index + 1) - 20;
                 final double xOffset = -10.0;
 
