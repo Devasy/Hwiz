@@ -46,14 +46,14 @@ class ProfileCard extends StatelessWidget {
                 child: CircleAvatar(
                   radius: 32,
                   backgroundColor: _getAvatarColor(context),
-                  backgroundImage: profile.photoPath != null &&
-                          File(profile.photoPath!).existsSync()
+                  backgroundImage: _hasValidPhoto(profile.photoPath)
                       ? FileImage(File(profile.photoPath!))
                       : null,
-                  child: (profile.photoPath == null ||
-                          !File(profile.photoPath!).existsSync())
+                  child: !_hasValidPhoto(profile.photoPath)
                       ? Text(
-                          profile.name[0].toUpperCase(),
+                          profile.name.isNotEmpty
+                              ? profile.name[0].toUpperCase()
+                              : '?',
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -218,6 +218,15 @@ class ProfileCard extends StatelessWidget {
       return '$age years';
     } catch (e) {
       return dateOfBirth;
+    }
+  }
+
+  bool _hasValidPhoto(String? path) {
+    if (path == null || path.isEmpty) return false;
+    try {
+      return File(path).existsSync();
+    } catch (_) {
+      return false;
     }
   }
 }

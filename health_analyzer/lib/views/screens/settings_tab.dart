@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../models/profile.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/theme_extensions.dart';
 import '../../theme/theme_manager.dart';
@@ -193,8 +194,8 @@ class SettingsTab extends StatelessWidget {
   Widget _buildProfileSwitcherCard(
     BuildContext context,
     ProfileViewModel profileVM,
-    dynamic activeProfile,
-    List<dynamic> allProfiles,
+    Profile? activeProfile,
+    List<Profile> allProfiles,
   ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -219,6 +220,17 @@ class SettingsTab extends StatelessWidget {
         ),
       );
     }
+
+    final age = activeProfile.dateOfBirth != null && activeProfile.dateOfBirth!.isNotEmpty
+        ? profileVM.getAge(activeProfile)
+        : null;
+    final details = [
+      if (age != null) '$age yrs',
+      if (activeProfile.gender != null && activeProfile.gender!.isNotEmpty)
+        activeProfile.gender!,
+      if (activeProfile.relationship != null && activeProfile.relationship!.isNotEmpty)
+        activeProfile.relationship!,
+    ];
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacing16, vertical: 8),
@@ -273,7 +285,7 @@ class SettingsTab extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${activeProfile.age} yrs • ${activeProfile.gender}${activeProfile.bloodGroup != null ? ' • ${activeProfile.bloodGroup}' : ''}',
+                      details.isNotEmpty ? details.join(' • ') : 'Family Member',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -301,12 +313,13 @@ class SettingsTab extends StatelessWidget {
               child: Row(
                 children: allProfiles.map((p) {
                   final isSelected = p.id == activeProfile.id;
+                  final displayName = p.name.trim().isEmpty ? 'User' : p.name.trim().split(' ').first;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
                       selected: isSelected,
                       avatar: ProfileAvatar(name: p.name, size: 24),
-                      label: Text(p.name.split(' ')[0]),
+                      label: Text(displayName),
                       onSelected: (selected) {
                         if (selected && !isSelected) {
                           HapticFeedback.selectionClick();

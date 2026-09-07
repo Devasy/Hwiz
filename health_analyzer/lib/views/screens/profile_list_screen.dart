@@ -224,7 +224,7 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
                           backgroundColor:
                               Theme.of(context).colorScheme.primary,
                           child: Text(
-                            profile.name[0].toUpperCase(),
+                            profile.name.isNotEmpty ? profile.name[0].toUpperCase() : '?',
                             style: TextStyle(
                               fontSize: 32,
                               color: Theme.of(context).colorScheme.onPrimary,
