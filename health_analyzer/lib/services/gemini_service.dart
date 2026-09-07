@@ -1,17 +1,18 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../utils/constants.dart';
+import 'gemini_api_client.dart';
 import 'loinc_mapper.dart';
 import 'model_info_service.dart';
 
 /// Gemini Service - Handles OCR and data extraction from blood reports
 class GeminiService {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
-  GenerativeModel? _model;
+  String _selectedModel = kDefaultGeminiModel;
+  String _apiKey = '';
 
   /// Initialize Gemini model with API key
   Future<void> initialize() async {
@@ -21,20 +22,19 @@ class GeminiService {
     if (apiKey == null || apiKey.isEmpty) {
       throw Exception('Gemini API key not found. Please set it in settings.');
     }
+    _apiKey = apiKey;
 
-    // Get selected model from storage, validate against active models, default to gemini-2.5-flash
+    // Get selected model from storage, validate against active models
     final storedModel = await _secureStorage.read(
       key: 'selected_gemini_model',
     );
-    final selectedModel = ModelInfoService().getSanitizedModel(storedModel);
-    if (storedModel != null && storedModel != selectedModel) {
+    _selectedModel = ModelInfoService().getSanitizedModel(storedModel);
+    if (storedModel != null && storedModel != _selectedModel) {
       await _secureStorage.write(
         key: 'selected_gemini_model',
-        value: selectedModel,
+        value: _selectedModel,
       );
     }
-
-    _model = GenerativeModel(model: selectedModel, apiKey: apiKey);
   }
 
   /// Set API key in secure storage
@@ -48,7 +48,7 @@ class GeminiService {
 
   /// Extract blood report data from image or PDF
   Future<Map<String, dynamic>> extractBloodReportData(File file) async {
-    if (_model == null) {
+    if (_apiKey.isEmpty) {
       await initialize();
     }
 
@@ -57,41 +57,30 @@ class GeminiService {
 
     final prompt = _buildExtractionPrompt();
 
-    final content = [
-      Content.multi([TextPart(prompt), DataPart(mimeType, bytes)]),
-    ];
+    final userTurn = GeminiApiClient.buildMultimodalUserTurn(
+      text: prompt,
+      fileBytes: bytes,
+      mimeType: mimeType,
+    );
 
     try {
-      final response = await _model!.generateContent(
-        content,
-        generationConfig: GenerationConfig(
-          temperature: 0.1, // Low temperature for consistent output
-          maxOutputTokens: 8192, // Increased token limit for large reports
-        ),
+      final response = await GeminiApiClient.generateContent(
+        apiKey: _apiKey,
+        model: _selectedModel,
+        contents: [userTurn],
+        jsonMode: true,
+        temperature: 0.1,
+        maxOutputTokens: 8192,
       );
 
-      final extractedText = response.text;
-      if (extractedText == null || extractedText.isEmpty) {
+      final extractedText = GeminiApiClient.extractText(response);
+      if (extractedText.isEmpty) {
         throw Exception('No data extracted from the report');
       }
 
       debugPrint(
           '🔍 Raw Gemini Response (length: ${extractedText.length} chars):');
       debugPrint(extractedText);
-
-      // Check if response was likely truncated
-      if (response.candidates.isNotEmpty) {
-        final finishReason = response.candidates.first.finishReason;
-        if (finishReason == FinishReason.maxTokens) {
-          debugPrint(
-              '⚠️ WARNING: Response truncated due to max token limit. Report may have too many parameters.');
-          throw Exception(
-              'Report is too large to process in one request. This report contains many parameters. Please try:\n'
-              '1. Scanning only the essential pages\n'
-              '2. Breaking the report into smaller sections\n'
-              '3. Using a higher-tier Gemini model with larger token limits');
-        }
-      }
 
       // Parse JSON from response with better error handling
       final jsonData = _parseJsonFromResponse(extractedText);
@@ -357,14 +346,20 @@ EXTRACT EVERY SINGLE PARAMETER YOU SEE. Return ONLY the JSON, no markdown, no ex
   /// Test API key validity
   Future<bool> testApiKey(String apiKey) async {
     try {
-      final testModel = GenerativeModel(
-        model: 'gemini-1.5-pro',
+      final res = await GeminiApiClient.generateContent(
         apiKey: apiKey,
+        model: 'gemini-3.5-flash-lite',
+        contents: [
+          {
+            'role': 'user',
+            'parts': [
+              {'text': 'Hello'}
+            ]
+          }
+        ],
+        maxOutputTokens: 10,
       );
-
-      final response = await testModel.generateContent([Content.text('Hello')]);
-
-      return response.text != null;
+      return GeminiApiClient.extractText(res).isNotEmpty;
     } catch (e) {
       return false;
     }
@@ -401,7 +396,7 @@ EXTRACT EVERY SINGLE PARAMETER YOU SEE. Return ONLY the JSON, no markdown, no ex
     String? age,
     String? gender,
   }) async {
-    if (_model == null) {
+    if (_apiKey.isEmpty) {
       await initialize();
     }
 
@@ -413,16 +408,24 @@ EXTRACT EVERY SINGLE PARAMETER YOU SEE. Return ONLY the JSON, no markdown, no ex
     );
 
     try {
-      final response = await _model!.generateContent(
-        [Content.text(prompt)],
-        generationConfig: GenerationConfig(
-          temperature: 0.3,
-          maxOutputTokens: 2048,
-        ),
+      final response = await GeminiApiClient.generateContent(
+        apiKey: _apiKey,
+        model: _selectedModel,
+        contents: [
+          {
+            'role': 'user',
+            'parts': [
+              {'text': prompt}
+            ]
+          }
+        ],
+        jsonMode: true,
+        temperature: 0.3,
+        maxOutputTokens: 2048,
       );
 
-      final analysisText = response.text;
-      if (analysisText == null || analysisText.isEmpty) {
+      final analysisText = GeminiApiClient.extractText(response);
+      if (analysisText.isEmpty) {
         throw Exception('No analysis generated');
       }
 
@@ -537,7 +540,7 @@ Generate the analysis now:
     required List<Map<String, dynamic>> historicalData,
     String? currentStatus,
   }) async {
-    if (_model == null) {
+    if (_apiKey.isEmpty) {
       await initialize();
     }
 
@@ -548,16 +551,23 @@ Generate the analysis now:
     );
 
     try {
-      final response = await _model!.generateContent(
-        [Content.text(prompt)],
-        generationConfig: GenerationConfig(
-          temperature: 0.3,
-          maxOutputTokens: 1024,
-        ),
+      final response = await GeminiApiClient.generateContent(
+        apiKey: _apiKey,
+        model: _selectedModel,
+        contents: [
+          {
+            'role': 'user',
+            'parts': [
+              {'text': prompt}
+            ]
+          }
+        ],
+        temperature: 0.3,
+        maxOutputTokens: 1024,
       );
 
-      final analysisText = response.text;
-      if (analysisText == null || analysisText.isEmpty) {
+      final analysisText = GeminiApiClient.extractText(response);
+      if (analysisText.isEmpty) {
         throw Exception('No trend analysis generated');
       }
 

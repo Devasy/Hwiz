@@ -13,7 +13,7 @@ class ModelInfoService {
 
     try {
       final url = Uri.parse(
-          'https://generativelanguage.googleapis.com/v1/models?key=$apiKey');
+          'https://generativelanguage.googleapis.com/v1beta/models?key=$apiKey');
 
       developer.log(
           '📡 Making API request to: ${url.toString().replaceAll(apiKey, "***")}');
@@ -47,22 +47,12 @@ class ModelInfoService {
           // Extract model ID
           final modelId = name.replaceFirst('models/', '');
 
-          developer.log('');
-          developer.log('🤖 Model: $modelId');
-          developer.log('   Display Name: $displayName');
-          developer.log('   Description: $description');
-          developer.log('   Supported Methods: ${supportedMethods.join(", ")}');
-          developer.log('   Input Token Limit: $inputTokenLimit');
-          developer.log('   Output Token Limit: $outputTokenLimit');
-
           // Only include models that support generateContent
           if (supportedMethods.contains('generateContent')) {
             final info = _createModelInfo(modelId, displayName, description,
                 inputTokenLimit, outputTokenLimit);
             availableModels.add(ModelOption(id: modelId, info: info));
-            developer.log('   ✅ SUPPORTS generateContent - ADDED TO LIST');
-          } else {
-            developer.log('   ❌ Does not support generateContent - SKIPPED');
+            developer.log('   ✅ $modelId - ADDED TO LIST');
           }
         }
 
@@ -70,11 +60,11 @@ class ModelInfoService {
         developer.log(
             '✨ Total models supporting generateContent: ${availableModels.length}');
 
-        // Sort by recommended first
+        // Sort by recommended first, then version
         availableModels.sort((a, b) {
           if (a.info.recommended && !b.info.recommended) return -1;
           if (!a.info.recommended && b.info.recommended) return 1;
-          return a.id.compareTo(b.id);
+          return b.id.compareTo(a.id);
         });
 
         return availableModels;
@@ -116,23 +106,21 @@ class ModelInfoService {
   }
 
   bool _isRecommended(String modelId) {
-    return (modelId.contains('flash') || modelId.contains('pro')) &&
-        !modelId.contains('exp') &&
-        !modelId.contains('vision');
+    return modelId.contains('3.5-flash-lite') ||
+        modelId.contains('3.5-flash') ||
+        modelId.contains('2.5-flash');
   }
 
   String _estimateSpeed(String modelId) {
-    if (modelId.contains('3.8') || modelId.contains('flash-8b')) return 'Fastest';
+    if (modelId.contains('flash-lite') || modelId.contains('8b')) return 'Fastest';
     if (modelId.contains('flash')) return 'Very Fast';
     if (modelId.contains('pro')) return 'Fast';
     return 'Medium';
   }
 
   String _estimateQuality(String modelId) {
-    if (modelId.contains('3.8') || modelId.contains('pro')) return 'Best';
-    if (modelId.contains('flash') && !modelId.contains('8b')) {
-      return 'Excellent';
-    }
+    if (modelId.contains('3.7') || modelId.contains('3.6') || modelId.contains('pro')) return 'Best';
+    if (modelId.contains('3.5') || modelId.contains('2.5')) return 'Excellent';
     return 'Good';
   }
 
@@ -145,26 +133,58 @@ class ModelInfoService {
   }
 
   /// Get model display information for all current Gemini models
-  /// Updated regularly to reflect latest available models
   Map<String, ModelDisplayInfo> getModelDisplayInfo() {
     return {
-      // Gemini 3.8 Models (Latest Generation)
-      'gemini-3.8-flash': ModelDisplayInfo(
-        name: 'Gemini 3.8 Flash',
+      // Gemini 3.5 Models (Recommended)
+      'gemini-3.5-flash-lite': ModelDisplayInfo(
+        name: 'Gemini 3.5 Flash Lite',
         description:
-            '🚀 Latest state-of-the-art multimodal model with next-gen speed, exceptional reasoning, and ultra-accurate medical data extraction.',
+            '⚡ Recommended default: Ultra-fast, cost-effective multimodal model with next-gen reasoning and fast OCR extraction.',
         recommended: true,
         speed: 'Fastest',
+        quality: 'Excellent',
+        inputTokenLimit: 1048576,
+        outputTokenLimit: 65536,
+      ),
+
+      'gemini-3.5-flash': ModelDisplayInfo(
+        name: 'Gemini 3.5 Flash',
+        description:
+            '🚀 Balanced flagship multimodal model with strong reasoning and comprehensive extraction capabilities.',
+        recommended: true,
+        speed: 'Very Fast',
         quality: 'Best',
         inputTokenLimit: 1048576,
         outputTokenLimit: 65536,
       ),
 
-      // Gemini 2.5 Models (Current Default)
+      'gemini-3.6-flash': ModelDisplayInfo(
+        name: 'Gemini 3.6 Flash',
+        description:
+            '🧠 Advanced reasoning model for complex multipage laboratory reports and trend analysis.',
+        recommended: false,
+        speed: 'Fast',
+        quality: 'Best',
+        inputTokenLimit: 1048576,
+        outputTokenLimit: 65536,
+      ),
+
+      'gemini-3.7-flash': ModelDisplayInfo(
+        name: 'Gemini 3.7 Flash',
+        description:
+            '🎯 State-of-the-art thorough reasoning model with dynamic thinking capability.',
+        recommended: false,
+        speed: 'Fast',
+        quality: 'Best',
+        inputTokenLimit: 1048576,
+        outputTokenLimit: 65536,
+      ),
+
+      // Gemini 2.5 Models (Fallback)
       'gemini-2.5-flash': ModelDisplayInfo(
         name: 'Gemini 2.5 Flash',
         description:
-            '⚡ Default reliable workhorse model. Fast and accurate OCR for blood reports and medical records.',
+            '🛡️ Reliable production workhorse fallback for medical records and report extraction.',
         recommended: true,
         speed: 'Very Fast',
         quality: 'Excellent',
@@ -177,19 +197,20 @@ class ModelInfoService {
   /// Get recommended models specifically for OCR/Vision tasks
   List<String> getRecommendedModelsForOCR() {
     return [
-      'gemini-3.8-flash', // Latest recommended
-      'gemini-2.5-flash', // Default workhorse
+      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash',
+      'gemini-2.5-flash',
     ];
   }
 
-  /// Get the default model (most reliable and balanced)
+  /// Get the default model
   String getDefaultModel() {
-    return 'gemini-2.5-flash';
+    return 'gemini-3.5-flash-lite';
   }
 
   /// Check if a model ID is valid and active
   bool isValidModel(String? modelId) {
-    return modelId != null && getModelDisplayInfo().containsKey(modelId);
+    return modelId != null && (getModelDisplayInfo().containsKey(modelId) || modelId.startsWith('gemini-'));
   }
 
   /// Sanitize model ID, falling back to default if invalid or retired
@@ -198,6 +219,22 @@ class ModelInfoService {
       return modelId!;
     }
     return getDefaultModel();
+  }
+
+  /// Get fallback model if current model hits daily quota
+  String? getFallback(String currentModel) {
+    switch (currentModel) {
+      case 'gemini-3.7-flash':
+        return 'gemini-3.6-flash';
+      case 'gemini-3.6-flash':
+        return 'gemini-3.5-flash';
+      case 'gemini-3.5-flash':
+        return 'gemini-3.5-flash-lite';
+      case 'gemini-3.5-flash-lite':
+        return 'gemini-2.5-flash';
+      default:
+        return 'gemini-3.5-flash-lite';
+    }
   }
 
   /// Get information about model updates

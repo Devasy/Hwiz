@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 /// Display utilities for detecting and optimizing for high refresh rate displays (90Hz, 120Hz, etc.)
 ///

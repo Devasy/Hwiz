@@ -26,15 +26,6 @@ class SettingsTab extends StatelessWidget {
       backgroundColor: context.surfaceColor,
       appBar: AppBar(
         title: const Text('Settings'),
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            tooltip: 'Open menu',
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
-            },
-          ),
-        ),
       ),
       body: ListView(
         children: [

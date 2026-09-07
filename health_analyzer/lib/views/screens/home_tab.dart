@@ -14,6 +14,7 @@ import 'report_details_screen.dart';
 import 'compare_reports_screen.dart';
 import 'profile_list_screen.dart';
 import 'profile_form_screen.dart';
+import 'ask_ai_screen.dart';
 
 /// Home tab - main view with profile content
 class HomeTab extends StatefulWidget {
@@ -215,6 +216,17 @@ class _HomeTabState extends State<HomeTab> {
                       tooltip: 'Compare Reports',
                       onPressed: () => _navigateToCompare(profile!),
                     ),
+
+                  // Ask AI quick shortcut
+                  IconButton(
+                    icon: const Icon(Icons.auto_awesome_rounded),
+                    tooltip: 'Ask AI',
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const AskAiScreen()),
+                      );
+                    },
+                  ),
 
                   const SizedBox(width: AppTheme.spacing8),
                 ],

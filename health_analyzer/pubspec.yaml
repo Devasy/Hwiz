@@ -1,6 +1,6 @@
 name: lablens
 description: LabLens - Your Family's Health, Tracked & Analyzed
-version: 1.0.3+4
+version: 1.0.4+5
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -10,49 +10,46 @@ dependencies:
     sdk: flutter
   
   # State Management
-  provider: ^6.1.1
+  provider: ^6.1.2
   
   # Local Database
-  sqflite: ^2.3.0
-  path_provider: ^2.1.1
-  path: ^1.8.3
-  
-  # Google Gemini AI
-  google_generative_ai: ^0.4.7
+  sqflite: ^2.4.2
+  path_provider: ^2.1.5
+  path: ^1.9.1
   
   # File Picking
   image_picker: ^1.1.2
-  file_picker: ^10.3.3
+  file_picker: ^10.3.10
   
   # Charts
   fl_chart: ^1.1.1
   
   # JSON Serialization
-  json_annotation: ^4.8.1
+  json_annotation: ^4.9.0
   
   # Date/Time utilities
   intl: ^0.20.2
   
   # Secure Storage
-  flutter_secure_storage: ^9.0.0
+  flutter_secure_storage: ^9.2.4
   
   # HTTP Client
-  http: ^1.2.0
+  http: ^1.2.2
   
   # Fuzzy Matching
   fuzzywuzzy: ^1.2.0
   
   # PDF Viewer
-  syncfusion_flutter_pdfviewer: ^31.2.2
+  syncfusion_flutter_pdfviewer: ^31.2.18
   
   # Material 3 Dynamic Color (Material You)
-  dynamic_color: ^1.7.0
+  dynamic_color: ^1.9.0
   
   # Shared Preferences for theme settings
-  shared_preferences: ^2.0.15
+  shared_preferences: ^2.5.3
   
   # Page Transitions & Animations
-  animations: ^2.0.11
+  animations: ^2.2.0
   
   # CSV Export
   csv: ^6.0.0
@@ -64,15 +61,15 @@ dependencies:
   url_launcher: ^6.3.1
   
   # UI Components
-  cupertino_icons: ^1.0.6
+  cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  build_runner: ^2.4.7
-  json_serializable: ^6.7.1
-  mockito: ^5.4.4
+  build_runner: ^2.4.15
+  json_serializable: ^6.9.4
+  mockito: ^5.4.5
   flutter_launcher_icons: ^0.14.1
 
 flutter:

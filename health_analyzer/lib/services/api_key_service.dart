@@ -1,6 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
 import 'dart:io';
+import 'dart:async';
+import 'gemini_api_client.dart';
 
 /// Service to manage Gemini API key storage, validation, and retrieval
 class ApiKeyService {
@@ -52,22 +53,26 @@ class ApiKeyService {
     }
 
     try {
-      // Test the API key with a simple request using Gemini 2.5 Flash
-      final model = GenerativeModel(
-        model: 'gemini-2.5-flash',
+      // Test the API key with a simple request using Gemini 3.5 Flash Lite
+      final response = await GeminiApiClient.generateContent(
         apiKey: apiKey,
-      );
-
-      // Make a minimal test request
-      final response = await model.generateContent([
-        Content.text('Hello'),
-      ]).timeout(
+        model: 'gemini-3.5-flash-lite',
+        contents: [
+          {
+            'role': 'user',
+            'parts': [
+              {'text': 'Hello'}
+            ]
+          }
+        ],
+        maxOutputTokens: 10,
+      ).timeout(
         const Duration(seconds: 10),
         onTimeout: () => throw TimeoutException('Request timed out'),
       );
 
-      // If we get here without error, the key is valid
-      if (response.text != null) {
+      final text = GeminiApiClient.extractText(response);
+      if (text.isNotEmpty) {
         return (true, null);
       } else {
         return (false, 'Invalid response from API. Please check your key');
@@ -88,33 +93,24 @@ class ApiKeyService {
         false,
         'Network error: Unable to connect. Please check your internet connection'
       );
-    } on GenerativeAIException catch (e) {
-      // Handle specific AI exceptions
-      if (e.message.contains('API key not valid') ||
-          e.message.contains('invalid_api_key') ||
-          e.message.contains('API_KEY_INVALID')) {
-        return (false, 'Invalid API key. Please check your key and try again');
-      } else if (e.message.contains('quota') || e.message.contains('QUOTA')) {
-        return (false, 'API key is valid but quota exceeded. Try again later');
-      } else if (e.message.contains('model') || e.message.contains('MODEL')) {
-        return (
-          false,
-          'Model access error. The API key may not have access to this model'
-        );
-      } else {
-        return (false, 'API Error: ${e.message}');
-      }
     } on TimeoutException catch (_) {
       return (
         false,
         'Connection timeout. Please check your internet connection and try again'
       );
     } catch (e) {
-      // Catch any other errors including ClientException
       final errorStr = e.toString();
 
-      // Check for network-related errors in the error string
-      if (errorStr.contains('SocketException') ||
+      if (errorStr.contains('API key not valid') ||
+          errorStr.contains('invalid_api_key') ||
+          errorStr.contains('API_KEY_INVALID') ||
+          errorStr.contains('400')) {
+        return (false, 'Invalid API key. Please check your key and try again');
+      } else if (errorStr.contains('quota') ||
+          errorStr.contains('QUOTA') ||
+          errorStr.contains('429')) {
+        return (false, 'API key is valid but quota exceeded. Try again later');
+      } else if (errorStr.contains('SocketException') ||
           errorStr.contains('Failed host lookup') ||
           errorStr.contains('ClientException')) {
         return (
@@ -125,7 +121,7 @@ class ApiKeyService {
 
       return (
         false,
-        'Validation error: Unable to verify API key. Please try again'
+        'Validation error: Unable to verify API key ($errorStr)'
       );
     }
   }

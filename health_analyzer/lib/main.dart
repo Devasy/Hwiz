@@ -7,6 +7,7 @@ import 'utils/display_utils.dart';
 import 'viewmodels/settings_viewmodel.dart';
 import 'viewmodels/profile_viewmodel.dart';
 import 'viewmodels/report_viewmodel.dart';
+import 'viewmodels/ask_ai_viewmodel.dart';
 import 'views/screens/main_shell.dart';
 
 void main() async {
@@ -80,6 +81,7 @@ class _LabLensAppState extends State<LabLensApp> {
         ChangeNotifierProvider(create: (_) => SettingsViewModel()),
         ChangeNotifierProvider(create: (_) => ProfileViewModel()..initialize()),
         ChangeNotifierProvider(create: (_) => ReportViewModel()),
+        ChangeNotifierProvider(create: (_) => AskAiViewModel()),
       ],
       child: DynamicColorBuilder(
         builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
