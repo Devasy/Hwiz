@@ -6,12 +6,14 @@ class AppConstants {
 
   // Database
   static const String databaseName = 'health_analyzer.db';
-  static const int databaseVersion = 1;
+  static const int databaseVersion = 2;
 
   // Table Names
   static const String tableProfiles = 'profiles';
   static const String tableReports = 'reports';
   static const String tableBloodParameters = 'blood_parameters';
+  static const String tableAiChatSessions = 'ai_chat_sessions';
+  static const String tableAiChatMessages = 'ai_chat_messages';
 
   // API Settings
   static const String geminiApiKeyStorage = 'gemini_api_key';

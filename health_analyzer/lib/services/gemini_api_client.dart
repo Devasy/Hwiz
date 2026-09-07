@@ -129,6 +129,8 @@ class GeminiApiClient {
     return {'thinkingLevel': clamped};
   }
 
+  static const Duration _kRequestTimeout = Duration(seconds: 90);
+
   /// Generate content (non-streaming, JSON or text)
   static Future<Map<String, dynamic>> generateContent({
     required String apiKey,
@@ -145,6 +147,7 @@ class GeminiApiClient {
     String currentThinkingLevel = thinkingLevel;
 
     for (var attempt = 0;; attempt++) {
+      // Rebuild body inside loop so fallback model gets correct thinkingConfig
       final body = {
         'contents': contents,
         if (systemInstruction != null && systemInstruction.isNotEmpty)
@@ -165,12 +168,18 @@ class GeminiApiClient {
         },
       };
 
-      final uri = Uri.parse('$_apiBase/$currentModel:generateContent?key=$apiKey');
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
-      );
+      // Key goes in header, NOT the URI, to avoid leaking it in error messages
+      final uri = Uri.parse('$_apiBase/$currentModel:generateContent');
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey,
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(_kRequestTimeout);
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
@@ -246,87 +255,81 @@ class GeminiApiClient {
     ];
 
     for (var round = 0; round < maxToolRounds; round++) {
-      final body = {
-        'contents': contents,
-        if (systemPrompt.isNotEmpty)
-          'systemInstruction': {
-            'parts': [
-              {'text': systemPrompt}
-            ]
-          },
-        if (tools != null && tools.isNotEmpty) 'tools': tools,
-        'generationConfig': {
-          'temperature': 0.3,
-          'thinkingConfig': _buildThinkingConfig(
-            currentModel,
-            currentThinkingLevel,
-          ),
-        },
-      };
-
       final rawModelParts = <Map<String, dynamic>>[];
       final calls = <Map<String, dynamic>>[];
 
       http.Client client = http.Client();
       http.StreamedResponse? streamed;
 
-      for (var attempt = 0;; attempt++) {
-        final uri = Uri.parse(
-          '$_apiBase/$currentModel:streamGenerateContent?alt=sse&key=$apiKey',
-        );
-        final req = http.Request('POST', uri)
-          ..headers['Content-Type'] = 'application/json'
-          ..body = jsonEncode(body);
+      try {
+        for (var attempt = 0;; attempt++) {
+          // Rebuild body inside retry loop so fallback model gets correct thinkingConfig
+          final body = {
+            'contents': contents,
+            if (systemPrompt.isNotEmpty)
+              'systemInstruction': {
+                'parts': [
+                  {'text': systemPrompt}
+                ]
+              },
+            if (tools != null && tools.isNotEmpty) 'tools': tools,
+            'generationConfig': {
+              'temperature': 0.3,
+              'thinkingConfig': _buildThinkingConfig(
+                currentModel,
+                currentThinkingLevel,
+              ),
+            },
+          };
 
-        final resp = await client.send(req);
-        if (resp.statusCode == 200) {
-          streamed = resp;
-          break;
-        }
+          // Key goes in header, NOT the URI
+          final uri = Uri.parse(
+            '$_apiBase/$currentModel:streamGenerateContent?alt=sse',
+          );
+          final req = http.Request('POST', uri)
+            ..headers['Content-Type'] = 'application/json'
+            ..headers['x-goog-api-key'] = apiKey
+            ..body = jsonEncode(body);
 
-        final err = await resp.stream.bytesToString();
-        if (_isDailyQuotaExhausted(err)) {
-          final fallback = getFallbackModel(currentModel);
-          if (fallback != null) {
-            debugPrint('⚠️ Stream quota hit for $currentModel. Fallback to $fallback');
-            currentModel = fallback;
-            currentThinkingLevel = clampThinkingLevel(currentModel, currentThinkingLevel);
+          final resp = await client.send(req).timeout(_kRequestTimeout);
+          if (resp.statusCode == 200) {
+            streamed = resp;
+            break;
+          }
+
+          final err = await resp.stream.bytesToString();
+          if (_isDailyQuotaExhausted(err)) {
+            final fallback = getFallbackModel(currentModel);
+            if (fallback != null) {
+              debugPrint('⚠️ Stream quota hit for $currentModel. Fallback to $fallback');
+              currentModel = fallback;
+              currentThinkingLevel = clampThinkingLevel(currentModel, currentThinkingLevel);
+              client.close();
+              client = http.Client();
+              continue;
+            }
+          }
+
+          final customDelay = _extractRetryDelay(err);
+          if (_isRetryableStatus(resp.statusCode) &&
+              (attempt < _kMaxRetries ||
+                  (customDelay != null && attempt < _kMaxRetriesWithServerDelay))) {
             client.close();
+            final delay = customDelay ?? _retryBackoff(attempt);
+            await Future.delayed(delay);
             client = http.Client();
             continue;
           }
+
+          throw Exception(_errorMessage(resp.statusCode, err));
         }
 
-        final customDelay = _extractRetryDelay(err);
-        if (_isRetryableStatus(resp.statusCode) &&
-            (attempt < _kMaxRetries ||
-                (customDelay != null && attempt < _kMaxRetriesWithServerDelay))) {
-          client.close();
-          final delay = customDelay ?? _retryBackoff(attempt);
-          await Future.delayed(delay);
-          client = http.Client();
-          continue;
-        }
-
-        client.close();
-        throw Exception(_errorMessage(resp.statusCode, err));
-      }
-
-      final lineBuf = StringBuffer();
-      await for (final chunk in streamed.stream.transform(utf8.decoder)) {
-        lineBuf.write(chunk);
-        final text = lineBuf.toString();
-        final lines = text.split('\n');
-        lineBuf
-          ..clear()
-          ..write(lines.last);
-
-        for (var i = 0; i < lines.length - 1; i++) {
-          final line = lines[i].trim();
-          if (!line.startsWith('data:')) continue;
-          final jsonStr = line.substring(5).trim();
-          if (jsonStr.isEmpty || jsonStr == '[DONE]') continue;
-
+        // Process SSE stream
+        void parseLine(String line) {
+          final trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) return;
+          final jsonStr = trimmed.substring(5).trim();
+          if (jsonStr.isEmpty || jsonStr == '[DONE]') return;
           try {
             final map = jsonDecode(jsonStr) as Map<String, dynamic>;
             final candidates = map['candidates'] as List<dynamic>? ?? [];
@@ -337,12 +340,6 @@ class GeminiApiClient {
               for (final part in parts) {
                 if (part is! Map<String, dynamic>) continue;
                 rawModelParts.add(part);
-
-                if (part.containsKey('text') && part['thought'] != true) {
-                  final t = part['text'] as String? ?? '';
-                  if (t.isNotEmpty) yield t;
-                }
-
                 if (part.containsKey('functionCall')) {
                   calls.add(part['functionCall'] as Map<String, dynamic>);
                 }
@@ -350,8 +347,55 @@ class GeminiApiClient {
             }
           } catch (_) {}
         }
+
+        final lineBuf = StringBuffer();
+        await for (final chunk in streamed!.stream.transform(utf8.decoder)) {
+          lineBuf.write(chunk);
+          final text = lineBuf.toString();
+          final lines = text.split('\n');
+          lineBuf
+            ..clear()
+            ..write(lines.last);
+
+          for (var i = 0; i < lines.length - 1; i++) {
+            final line = lines[i].trim();
+            if (!line.startsWith('data:')) continue;
+            final jsonStr = line.substring(5).trim();
+            if (jsonStr.isEmpty || jsonStr == '[DONE]') continue;
+
+            try {
+              final map = jsonDecode(jsonStr) as Map<String, dynamic>;
+              final candidates = map['candidates'] as List<dynamic>? ?? [];
+              for (final raw in candidates) {
+                final c = raw as Map<String, dynamic>;
+                final content = c['content'] as Map<String, dynamic>?;
+                final parts = content?['parts'] as List<dynamic>? ?? [];
+                for (final part in parts) {
+                  if (part is! Map<String, dynamic>) continue;
+                  rawModelParts.add(part);
+
+                  if (part.containsKey('text') && part['thought'] != true) {
+                    final t = part['text'] as String? ?? '';
+                    if (t.isNotEmpty) yield t;
+                  }
+
+                  if (part.containsKey('functionCall')) {
+                    calls.add(part['functionCall'] as Map<String, dynamic>);
+                  }
+                }
+              }
+            } catch (_) {}
+          }
+        }
+
+        // Flush any remaining buffer content after stream ends
+        final remaining = lineBuf.toString().trim();
+        if (remaining.isNotEmpty) parseLine(remaining);
+
+      } finally {
+        // Always close the client, even if the stream threw
+        client.close();
       }
-      client.close();
 
       // If no function call requested, streaming finished
       if (calls.isEmpty || onToolCall == null) {

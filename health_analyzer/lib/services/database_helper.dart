@@ -6,6 +6,7 @@ import 'dart:io';
 import '../models/profile.dart';
 import '../models/blood_report.dart';
 import '../models/parameter.dart';
+import '../models/chat_history.dart';
 import '../utils/constants.dart';
 
 /// Database Helper - Singleton class to manage SQLite database
@@ -46,8 +47,30 @@ class DatabaseHelper {
 
   /// Upgrade database schema
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Add migration logic here if needed in the future
-    // For now, we're on version 1
+    if (oldVersion < 2) {
+      // v1 → v2: Add AI chat history tables
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS ${AppConstants.tableAiChatSessions} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          profile_id INTEGER,
+          title TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (profile_id) REFERENCES ${AppConstants.tableProfiles}(id) ON DELETE SET NULL
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS ${AppConstants.tableAiChatMessages} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          session_id INTEGER NOT NULL,
+          role TEXT NOT NULL,
+          text TEXT NOT NULL,
+          executed_query TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (session_id) REFERENCES ${AppConstants.tableAiChatSessions}(id) ON DELETE CASCADE
+        )
+      ''');
+    }
   }
 
   /// Create database tables
@@ -90,6 +113,30 @@ class DatabaseHelper {
         reference_range_max REAL,
         raw_parameter_name TEXT,
         FOREIGN KEY (report_id) REFERENCES ${AppConstants.tableReports}(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // AI chat history tables
+    await db.execute('''
+      CREATE TABLE ${AppConstants.tableAiChatSessions} (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        profile_id INTEGER,
+        title TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (profile_id) REFERENCES ${AppConstants.tableProfiles}(id) ON DELETE SET NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE ${AppConstants.tableAiChatMessages} (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL,
+        role TEXT NOT NULL,
+        text TEXT NOT NULL,
+        executed_query TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (session_id) REFERENCES ${AppConstants.tableAiChatSessions}(id) ON DELETE CASCADE
       )
     ''');
 
@@ -394,5 +441,89 @@ class DatabaseHelper {
     );
     await databaseFactory.deleteDatabase(path);
     _database = null;
+  }
+
+  // ==================== AI CHAT HISTORY OPERATIONS ====================
+
+  /// Create a new chat session and return its ID
+  Future<int> createChatSession({
+    required String title,
+    int? profileId,
+  }) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    return await db.insert(AppConstants.tableAiChatSessions, {
+      'profile_id': profileId,
+      'title': title,
+      'created_at': now,
+      'updated_at': now,
+    });
+  }
+
+  /// Add a message to a session
+  Future<int> addChatMessage(AiChatMessage message) async {
+    final db = await database;
+    // Bump the session's updated_at
+    await db.update(
+      AppConstants.tableAiChatSessions,
+      {'updated_at': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [message.sessionId],
+    );
+    return await db.insert(
+      AppConstants.tableAiChatMessages,
+      message.toMap(),
+    );
+  }
+
+  /// Get all sessions, newest first, with message count
+  Future<List<AiChatSession>> getChatSessions({int? profileId}) async {
+    final db = await database;
+    final rows = await db.rawQuery('''
+      SELECT s.*,
+             COUNT(m.id) AS message_count
+      FROM ${AppConstants.tableAiChatSessions} s
+      LEFT JOIN ${AppConstants.tableAiChatMessages} m ON m.session_id = s.id
+      ${profileId != null ? 'WHERE s.profile_id = ?' : ''}
+      GROUP BY s.id
+      ORDER BY s.updated_at DESC
+    ''', profileId != null ? [profileId] : []);
+    return rows.map(AiChatSession.fromMap).toList();
+  }
+
+  /// Get all messages in a session
+  Future<List<AiChatMessage>> getChatMessages(int sessionId) async {
+    final db = await database;
+    final rows = await db.query(
+      AppConstants.tableAiChatMessages,
+      where: 'session_id = ?',
+      whereArgs: [sessionId],
+      orderBy: 'created_at ASC',
+    );
+    return rows.map(AiChatMessage.fromMap).toList();
+  }
+
+  /// Delete a single session (cascades to its messages)
+  Future<void> deleteChatSession(int sessionId) async {
+    final db = await database;
+    await db.delete(
+      AppConstants.tableAiChatSessions,
+      where: 'id = ?',
+      whereArgs: [sessionId],
+    );
+  }
+
+  /// Delete all sessions for a profile (or all if profileId is null)
+  Future<void> deleteAllChatSessions({int? profileId}) async {
+    final db = await database;
+    if (profileId != null) {
+      await db.delete(
+        AppConstants.tableAiChatSessions,
+        where: 'profile_id = ?',
+        whereArgs: [profileId],
+      );
+    } else {
+      await db.delete(AppConstants.tableAiChatSessions);
+    }
   }
 }

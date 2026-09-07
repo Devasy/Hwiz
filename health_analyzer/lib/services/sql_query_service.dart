@@ -51,6 +51,10 @@ class SqlQueryService {
     if (!(upper.startsWith('SELECT') || upper.startsWith('WITH'))) {
       throw SqlValidationException('Only read-only SELECT queries are allowed.');
     }
+    // Block unbounded recursive CTEs — row cap does not prevent infinite DB-side recursion
+    if (RegExp(r'\bWITH\s+RECURSIVE\b').hasMatch(upper)) {
+      throw SqlValidationException('Recursive CTEs (WITH RECURSIVE) are not allowed.');
+    }
     for (final kw in _forbiddenKeywords) {
       if (RegExp('\\b$kw\\b').hasMatch(upper)) {
         throw SqlValidationException('Query contains forbidden keyword: $kw');
