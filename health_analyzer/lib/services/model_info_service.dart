@@ -9,27 +9,29 @@ import 'dart:convert';
 class ModelInfoService {
   /// Fetch available models dynamically from Gemini API
   Future<List<ModelOption>> fetchAvailableModels(String apiKey) async {
-    developer.log('🔍 Fetching available Gemini models from API...');
+    developer.log('Fetching available Gemini models from API...');
+
+    // Models whose names contain these strings are audio/video-only and cannot
+    // process PDFs or images — exclude them from the model picker.
+    const _audioOnlyPatterns = [
+      'transcribe', 'tts', '-live', 'native-audio',
+      'lyria', 'veo', 'robotics',
+    ];
 
     try {
       final url = Uri.parse(
-          'https://generativelanguage.googleapis.com/v1beta/models?key=$apiKey');
+          'https://generativelanguage.googleapis.com/v1beta/models?pageSize=200');
 
-      developer.log(
-          '📡 Making API request to: ${url.toString().replaceAll(apiKey, "***")}');
-
-      final response = await http.get(url);
+      final response = await http.get(
+        url,
+        headers: {'x-goog-api-key': apiKey},
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final models = data['models'] as List;
 
-        developer
-            .log('✅ Successfully fetched ${models.length} models from API');
-
-        // Log all available models
-        developer.log('📋 AVAILABLE MODELS:');
-        developer.log('=' * 80);
+        developer.log('Fetched ${models.length} models from API');
 
         final availableModels = <ModelOption>[];
 
@@ -44,23 +46,28 @@ class ModelInfoService {
           final inputTokenLimit = model['inputTokenLimit'] as int? ?? 0;
           final outputTokenLimit = model['outputTokenLimit'] as int? ?? 0;
 
-          // Extract model ID
           final modelId = name.replaceFirst('models/', '');
 
-          // Only include models that support generateContent
-          if (supportedMethods.contains('generateContent')) {
+          // Skip models that only support bidiGenerateContent (live/audio only)
+          final onlyBidi = supportedMethods.length == 1 &&
+              supportedMethods.contains('bidiGenerateContent');
+
+          // Skip known audio/video-only model families
+          final isAudioOnly = _audioOnlyPatterns
+              .any((p) => modelId.toLowerCase().contains(p));
+
+          if (supportedMethods.contains('generateContent') &&
+              !onlyBidi &&
+              !isAudioOnly) {
             final info = _createModelInfo(modelId, displayName, description,
                 inputTokenLimit, outputTokenLimit);
             availableModels.add(ModelOption(id: modelId, info: info));
-            developer.log('   ✅ $modelId - ADDED TO LIST');
           }
         }
 
-        developer.log('=' * 80);
-        developer.log(
-            '✨ Total models supporting generateContent: ${availableModels.length}');
+        developer.log('Models supporting PDF/image generateContent: ${availableModels.length}');
 
-        // Sort by recommended first, then version
+        // Sort: recommended first, then by version descending
         availableModels.sort((a, b) {
           if (a.info.recommended && !b.info.recommended) return -1;
           if (!a.info.recommended && b.info.recommended) return 1;
@@ -69,12 +76,11 @@ class ModelInfoService {
 
         return availableModels;
       } else {
-        developer.log('❌ API Error: ${response.statusCode} - ${response.body}');
+        developer.log('API Error: ${response.statusCode}');
         throw Exception('Failed to fetch models: ${response.statusCode}');
       }
     } catch (e) {
-      developer.log('❌ Exception while fetching models: $e');
-      developer.log('⚠️  Falling back to static model list');
+      developer.log('Falling back to static model list: $e');
       return getAllAvailableModels();
     }
   }
@@ -213,38 +219,30 @@ class ModelInfoService {
     return modelId != null && (getModelDisplayInfo().containsKey(modelId) || modelId.startsWith('gemini-'));
   }
 
-  /// Sanitize model ID, falling back to default if invalid or retired
+  /// Sanitize model ID — validates against the static known-model map.
+  /// Falls back to the default if the ID is null, empty, or not in the map.
+  /// This prevents retired or audio-only model IDs from reaching GeminiApiClient.
   String getSanitizedModel(String? modelId) {
-    if (isValidModel(modelId)) {
-      return modelId!;
+    if (modelId != null && modelId.isNotEmpty &&
+        getModelDisplayInfo().containsKey(modelId)) {
+      return modelId;
     }
     return getDefaultModel();
-  }
-
-  /// Get fallback model if current model hits daily quota
-  String? getFallback(String currentModel) {
-    switch (currentModel) {
-      case 'gemini-3.7-flash':
-        return 'gemini-3.6-flash';
-      case 'gemini-3.6-flash':
-        return 'gemini-3.5-flash';
-      case 'gemini-3.5-flash':
-        return 'gemini-3.5-flash-lite';
-      case 'gemini-3.5-flash-lite':
-        return 'gemini-2.5-flash';
-      default:
-        return 'gemini-3.5-flash-lite';
-    }
   }
 
   /// Get information about model updates
   String getModelUpdateInfo() {
     return '''
-Model List Last Updated: 2026
+Model List Last Updated: September 2026
 
-Active Production Models:
-• Gemini 3.8 Flash - Latest multimodal flagship with high precision
-• Gemini 2.5 Flash - High speed production workhorse (Recommended)
+Active Production Models (PDF/image capable):
+- Gemini 3.5 Flash Lite - Fastest, recommended default for extraction
+- Gemini 3.5 Flash     - Slightly higher extraction accuracy (~6% more params)
+- Gemini 3.6/3.7 Flash - Advanced reasoning for complex multi-page reports
+- Gemini 2.5 Flash     - Reliable fallback production workhorse
+
+Note: gemini-3.5-transcribe is audio/speech-to-text only and cannot
+process PDFs or images. It is excluded from the model picker.
 
 For the latest model information, visit:
 https://ai.google.dev/gemini-api/docs/models/gemini
