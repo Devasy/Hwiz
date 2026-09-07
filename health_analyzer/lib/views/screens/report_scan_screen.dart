@@ -555,7 +555,7 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
   }) {
     return Card(
       elevation: 4,
-      color: context.primaryContainer.withOpacity(0.3),
+      color: context.primaryContainer.withValues(alpha: 0.3),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -563,7 +563,7 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
             border: Border.all(
-              color: context.primaryColor.withOpacity(0.3),
+              color: context.primaryColor.withValues(alpha: 0.3),
               width: 2,
             ),
           ),
@@ -579,7 +579,7 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
                     borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                     boxShadow: [
                       BoxShadow(
-                        color: context.primaryColor.withOpacity(0.3),
+                        color: context.primaryColor.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),

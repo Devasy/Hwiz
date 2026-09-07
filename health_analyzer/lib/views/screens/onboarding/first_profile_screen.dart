@@ -88,7 +88,7 @@ class _FirstProfileScreenState extends State<FirstProfileScreen> {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: AppTheme.successColor.withOpacity(0.2),
+                    color: AppTheme.successColor.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(

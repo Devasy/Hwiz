@@ -1,6 +1,7 @@
 /// Reference Range Database - Provides standard reference ranges for blood parameters
 /// Based on clinical standards and real-world lab report analysis
 /// Supports age and gender-specific ranges
+library;
 
 class ReferenceRange {
   final double? minMale;

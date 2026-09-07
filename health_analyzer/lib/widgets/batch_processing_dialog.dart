@@ -39,13 +39,13 @@ class BatchProcessingDialog extends StatefulWidget {
   final int maxRetries;
 
   const BatchProcessingDialog({
-    Key? key,
+    super.key,
     required this.files,
     required this.profileId,
     this.gender,
     this.maxParallel = 4,
     this.maxRetries = 2,
-  }) : super(key: key);
+  });
 
   @override
   State<BatchProcessingDialog> createState() => _BatchProcessingDialogState();
@@ -354,10 +354,10 @@ class _BatchProcessingDialogState extends State<BatchProcessingDialog> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.2),
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Column(
@@ -376,7 +376,7 @@ class _BatchProcessingDialogState extends State<BatchProcessingDialog> {
               Container(
                 width: 1,
                 height: 40,
-                color: theme.colorScheme.outline.withOpacity(0.2),
+                color: theme.colorScheme.outline.withValues(alpha: 0.2),
               ),
               _buildStatColumn(
                 icon: Icons.error,
@@ -387,7 +387,7 @@ class _BatchProcessingDialogState extends State<BatchProcessingDialog> {
               Container(
                 width: 1,
                 height: 40,
-                color: theme.colorScheme.outline.withOpacity(0.2),
+                color: theme.colorScheme.outline.withValues(alpha: 0.2),
               ),
               _buildStatColumn(
                 icon: Icons.timer,
@@ -486,7 +486,7 @@ class _BatchProcessingDialogState extends State<BatchProcessingDialog> {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: color.withOpacity(0.7),
+            color: color.withValues(alpha: 0.7),
           ),
         ),
       ],

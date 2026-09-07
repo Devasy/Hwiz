@@ -189,7 +189,7 @@ class _AppDrawerState extends State<AppDrawer>
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onPrimaryContainer
-                                        .withOpacity(0.7),
+                                        .withValues(alpha: 0.7),
                                   ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -210,7 +210,7 @@ class _AppDrawerState extends State<AppDrawer>
                         color: Theme.of(context)
                             .colorScheme
                             .primary
-                            .withOpacity(0.15),
+                            .withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -243,7 +243,7 @@ class _AppDrawerState extends State<AppDrawer>
                             color: Theme.of(context)
                                 .colorScheme
                                 .onPrimaryContainer
-                                .withOpacity(0.7),
+                                .withValues(alpha: 0.7),
                           ),
                         ],
                       ),
@@ -346,7 +346,7 @@ class _AppDrawerState extends State<AppDrawer>
                   color: Theme.of(context)
                       .colorScheme
                       .onSurfaceVariant
-                      .withOpacity(0.6),
+                      .withValues(alpha: 0.6),
                 ),
           ),
         ],

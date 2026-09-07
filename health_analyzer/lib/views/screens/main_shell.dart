@@ -23,7 +23,7 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> _tabs = [
+    final List<Widget> tabs = [
       const HomeTab(),
       SettingsTab(
         onAmoledModeChanged: widget.onAmoledModeChanged,
@@ -36,7 +36,7 @@ class _MainShellState extends State<MainShell> {
       drawer: const AppDrawer(),
       body: IndexedStack(
         index: _currentIndex,
-        children: _tabs,
+        children: tabs,
       ),
       // Material 3 NavigationBar (replaces BottomNavigationBar)
       // Best practices:

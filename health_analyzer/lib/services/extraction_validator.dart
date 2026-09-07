@@ -257,7 +257,7 @@ class ExtractionValidator {
             // Platelet ref range should be in thousands
             if (refMinD < 100 || refMaxD < 100) {
               errors.add(
-                'Incorrect reference range for platelet_count: ${refMin}-${refMax}. Expected range like 150000-450000',
+                'Incorrect reference range for platelet_count: $refMin-$refMax. Expected range like 150000-450000',
               );
             }
           }

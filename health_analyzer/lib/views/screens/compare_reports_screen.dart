@@ -496,7 +496,7 @@ class _CompareReportsScreenState extends State<CompareReportsScreen> {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: context.outlineVariantColor.withOpacity(0.5),
+            color: context.outlineVariantColor.withValues(alpha: 0.5),
             width: 1,
           ),
         ),

@@ -51,4 +51,5 @@ app.*.map.json
 **/android/local.properties
 **/android/keystore_base64.txt
 testers*.csv
+BUNDLE-METADATA/
 

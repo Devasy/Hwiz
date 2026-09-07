@@ -136,7 +136,7 @@ class _ReportListScreenState extends State<ReportListScreen> {
             Icon(
               Icons.description_outlined,
               size: 100,
-              color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 24),
             Text(
@@ -150,7 +150,7 @@ class _ReportListScreenState extends State<ReportListScreen> {
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
-                        .withOpacity(0.6),
+                        .withValues(alpha: 0.6),
                   ),
               textAlign: TextAlign.center,
             ),
@@ -313,7 +313,7 @@ class _ReportCard extends StatelessWidget {
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurface
-                                        .withOpacity(0.6),
+                                        .withValues(alpha: 0.6),
                                   ),
                         ),
                       const SizedBox(height: 4),
@@ -323,7 +323,7 @@ class _ReportCard extends StatelessWidget {
                               color: Theme.of(context)
                                   .colorScheme
                                   .primary
-                                  .withOpacity(0.8),
+                                  .withValues(alpha: 0.8),
                             ),
                       ),
                     ],

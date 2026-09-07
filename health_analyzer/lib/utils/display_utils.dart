@@ -156,23 +156,19 @@ class DisplayUtils {
       debugPrint('╔════════════════════════════════════════╗');
       debugPrint('║     LabLens Display Capabilities      ║');
       debugPrint('╠════════════════════════════════════════╣');
-      debugPrint('║ Refresh Rate: ${display.refreshRate.toStringAsFixed(1)} Hz'
-              .padRight(40) +
-          '║');
+      debugPrint('${'║ Refresh Rate: ${display.refreshRate.toStringAsFixed(1)} Hz'
+              .padRight(40)}║');
       debugPrint(
-          '║ Size: ${display.size.width.toInt()}x${display.size.height.toInt()}'
-                  .padRight(40) +
-              '║');
+          '${'║ Size: ${display.size.width.toInt()}x${display.size.height.toInt()}'
+                  .padRight(40)}║');
       debugPrint(
-          '║ Device Pixel Ratio: ${display.devicePixelRatio.toStringAsFixed(2)}x'
-                  .padRight(40) +
-              '║');
+          '${'║ Device Pixel Ratio: ${display.devicePixelRatio.toStringAsFixed(2)}x'
+                  .padRight(40)}║');
       debugPrint(
-          '║ High Refresh: ${_highRefreshRateEnabled ? "✅ Enabled" : "⭕ Disabled"}'
-                  .padRight(40) +
-              '║');
+          '${'║ High Refresh: ${_highRefreshRateEnabled ? "✅ Enabled" : "⭕ Disabled"}'
+                  .padRight(40)}║');
       if (_highRefreshRateEnabled) {
-        debugPrint('║ Optimization: 20% faster animations'.padRight(40) + '║');
+        debugPrint('${'║ Optimization: 20% faster animations'.padRight(40)}║');
       }
       debugPrint('╚════════════════════════════════════════╝');
     } catch (e) {

@@ -182,7 +182,7 @@ class _ModelSelectorScreenState extends State<ModelSelectorScreen> {
                         elevation: isSelected ? 4 : 1,
                         color: isCurrent
                             ? theme.colorScheme.primaryContainer
-                                .withOpacity(0.3)
+                                .withValues(alpha: 0.3)
                             : null,
                         child: InkWell(
                           onTap: () {
@@ -315,7 +315,7 @@ class _ModelSelectorScreenState extends State<ModelSelectorScreen> {
                           ),
                         ),
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
       bottomNavigationBar: _availableModels != null && _selectedModel != null
@@ -348,7 +348,7 @@ class _ModelSelectorScreenState extends State<ModelSelectorScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant,
+        color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

@@ -111,9 +111,8 @@ class Skeleton extends StatelessWidget {
 
   const Skeleton.text({
     super.key,
-    double? width,
-  })  : width = width,
-        height = 16,
+    this.width,
+  })  : height = 16,
         borderRadius = const BorderRadius.all(Radius.circular(4));
 
   @override

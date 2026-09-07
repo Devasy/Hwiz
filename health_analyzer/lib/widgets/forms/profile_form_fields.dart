@@ -98,7 +98,7 @@ class ProfileFormFields {
     bool isOptional = false,
   }) {
     return DropdownButtonFormField<String>(
-      value: selectedGender,
+      initialValue: selectedGender,
       decoration: InputDecoration(
         labelText: isOptional ? 'Gender (Optional)' : 'Gender',
         hintText: 'Select gender',

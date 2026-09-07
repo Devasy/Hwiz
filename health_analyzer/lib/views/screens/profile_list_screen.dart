@@ -121,7 +121,7 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
             Icon(
               Icons.people_outline,
               size: 120,
-              color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 24),
             Text(
@@ -136,7 +136,7 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
-                        .withOpacity(0.6),
+                        .withValues(alpha: 0.6),
                   ),
             ),
             const SizedBox(height: 32),
@@ -251,7 +251,7 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.6),
+                                            .withValues(alpha: 0.6),
                                       ),
                                 ),
                             ],
@@ -458,7 +458,7 @@ class _DetailRow extends StatelessWidget {
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
-                          .withOpacity(0.6),
+                          .withValues(alpha: 0.6),
                     ),
               ),
               Text(
@@ -491,9 +491,9 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [

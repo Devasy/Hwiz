@@ -219,8 +219,8 @@ class ParameterAliasResolver {
     final pageVariations = [
       '${canonical}_page2',
       '${canonical}_page_2',
-      '${canonical} page2',
-      '${canonical} page 2',
+      '$canonical page2',
+      '$canonical page 2',
     ];
 
     // Add percentage variations
@@ -232,11 +232,11 @@ class ParameterAliasResolver {
       canonical.replaceAll('_percent', ''),
     ];
 
-    return [
+    return <dynamic>{
       ...aliases,
       ...pageVariations,
       ...percentageVariations,
-    ].toSet().toList();
+    }.toList();
   }
 
   /// Validate that merged parameters don't have contradictory values
