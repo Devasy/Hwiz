@@ -232,7 +232,7 @@ class ParameterAliasResolver {
       canonical.replaceAll('_percent', ''),
     ];
 
-    return <dynamic>{
+    return <String>{
       ...aliases,
       ...pageVariations,
       ...percentageVariations,
