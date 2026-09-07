@@ -117,15 +117,20 @@ class ReportViewModel extends ChangeNotifier {
       final FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
-        allowMultiple: false,
+        allowMultiple: true,
       );
 
       if (result == null || result.files.isEmpty) {
         return false; // User cancelled
       }
 
-      final file = File(result.files.first.path!);
-      return await _processPDF(file, profileId);
+      if (result.files.length == 1) {
+        final file = File(result.files.first.path!);
+        return await _processPDF(file, profileId);
+      } else {
+        final files = result.paths.map((path) => File(path!)).toList();
+        return await _processPdfList(files, profileId);
+      }
     } catch (e) {
       _setError('Failed to pick PDF: ${e.toString()}');
       return false;
@@ -233,6 +238,52 @@ class ReportViewModel extends ChangeNotifier {
     } finally {
       _setScanning(false);
       _setScanProgress(null);
+    }
+  }
+
+  /// Process a list of PDF files in parallel
+  Future<bool> _processPdfList(List<File> pdfFiles, int profileId) async {
+    _setScanning(true);
+    _clearError();
+    _setScanProgress(0.0);
+
+    try {
+      final totalFiles = pdfFiles.length;
+      int processedCount = 0;
+
+      final processingFutures = pdfFiles.map((file) {
+        return _processSinglePdf(file, profileId).then((success) {
+          processedCount++;
+          _setScanProgress(processedCount / totalFiles);
+          return success;
+        });
+      }).toList();
+
+      final results = await Future.wait(processingFutures);
+      final successfulCount = results.where((success) => success).length;
+
+      if (successfulCount > 0) {
+        await loadReportsForProfile(profileId);
+      }
+
+      return successfulCount == totalFiles;
+    } catch (e) {
+      _setError('An error occurred during batch processing: ${e.toString()}');
+      return false;
+    } finally {
+      _setScanning(false);
+      _setScanProgress(null);
+    }
+  }
+
+  /// Process a single PDF file and save its data
+  Future<bool> _processSinglePdf(File pdfFile, int profileId) async {
+    try {
+      final extractedData = await _geminiService.extractBloodReportData(pdfFile);
+      return await _saveExtractedData(extractedData, profileId, pdfFile.path);
+    } catch (e) {
+      debugPrint('Failed to process ${pdfFile.path}: $e');
+      return false;
     }
   }
 
