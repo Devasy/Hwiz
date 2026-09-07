@@ -7,6 +7,7 @@ import 'theme_utils.dart';
 class ThemeManager {
   static const String _themePreferenceKey = 'selected_theme';
   static const String _amoledModeKey = 'amoled_mode_enabled';
+  static const String _themeModeKey = 'theme_mode_setting';
 
   /// Available theme colors for the app
   /// Users can choose from these predefined themes or use system adaptive theme
@@ -49,6 +50,24 @@ class ThemeManager {
   static Future<void> setAmoledMode(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_amoledModeKey, enabled);
+  }
+
+  /// Get the ThemeMode setting from preferences
+  static Future<ThemeMode> getThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedMode = prefs.getString(_themeModeKey);
+    if (savedMode == 'dark') return ThemeMode.dark;
+    if (savedMode == 'light') return ThemeMode.light;
+    return ThemeMode.system;
+  }
+
+  /// Save the ThemeMode setting to preferences
+  static Future<void> setThemeMode(ThemeMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    String value = 'system';
+    if (mode == ThemeMode.dark) value = 'dark';
+    if (mode == ThemeMode.light) value = 'light';
+    await prefs.setString(_themeModeKey, value);
   }
 
   /// Get the Color for a specific theme name

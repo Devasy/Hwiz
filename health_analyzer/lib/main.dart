@@ -8,6 +8,7 @@ import 'viewmodels/settings_viewmodel.dart';
 import 'viewmodels/profile_viewmodel.dart';
 import 'viewmodels/report_viewmodel.dart';
 import 'viewmodels/ask_ai_viewmodel.dart';
+import 'viewmodels/theme_viewmodel.dart';
 import 'views/screens/main_shell.dart';
 
 void main() async {
@@ -27,99 +28,42 @@ void main() async {
   runApp(const LabLensApp());
 }
 
-class LabLensApp extends StatefulWidget {
+class LabLensApp extends StatelessWidget {
   const LabLensApp({super.key});
-
-  @override
-  State<LabLensApp> createState() => _LabLensAppState();
-}
-
-class _LabLensAppState extends State<LabLensApp> {
-  bool _amoledModeEnabled = false;
-  String _selectedTheme = 'Adaptive Theme';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadThemeSettings();
-  }
-
-  Future<void> _loadThemeSettings() async {
-    try {
-      final amoledMode = await ThemeManager.getAmoledMode();
-      final selectedTheme = await ThemeManager.getSelectedTheme();
-      if (!mounted) return;
-      setState(() {
-        _amoledModeEnabled = amoledMode;
-        _selectedTheme = selectedTheme;
-      });
-    } catch (e) {
-      debugPrint('Error loading theme settings: $e');
-    }
-  }
-
-  /// Update AMOLED mode setting
-  void updateAmoledMode(bool enabled) async {
-    await ThemeManager.setAmoledMode(enabled);
-    setState(() {
-      _amoledModeEnabled = enabled;
-    });
-  }
-
-  /// Update theme selection
-  void updateTheme(String themeName) async {
-    await ThemeManager.setSelectedTheme(themeName);
-    setState(() {
-      _selectedTheme = themeName;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ThemeViewModel()),
         ChangeNotifierProvider(create: (_) => SettingsViewModel()),
         ChangeNotifierProvider(create: (_) => ProfileViewModel()..initialize()),
         ChangeNotifierProvider(create: (_) => ReportViewModel()),
         ChangeNotifierProvider(create: (_) => AskAiViewModel()),
       ],
-      child: DynamicColorBuilder(
-        builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-          // Create color schemes based on selected theme and AMOLED mode
-          final (lightColorScheme, darkColorScheme) =
-              ThemeManager.createColorSchemes(
-            lightDynamic: lightDynamic,
-            darkDynamic: darkDynamic,
-            selectedTheme: _selectedTheme,
-            amoledModeEnabled: _amoledModeEnabled,
-          );
+      child: Consumer<ThemeViewModel>(
+        builder: (context, themeVM, child) {
+          return DynamicColorBuilder(
+            builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+              final (lightColorScheme, darkColorScheme) =
+                  ThemeManager.createColorSchemes(
+                lightDynamic: lightDynamic,
+                darkDynamic: darkDynamic,
+                selectedTheme: themeVM.selectedTheme,
+                amoledModeEnabled: themeVM.isAmoledMode,
+              );
 
-          // Log theme information in debug mode
-          if (_selectedTheme == 'Adaptive Theme' && lightDynamic != null) {
-            debugPrint('🎨 Material You enabled - using dynamic colors');
-            debugPrint('  Primary: ${lightDynamic.primary}');
-            debugPrint('  Secondary: ${lightDynamic.secondary}');
-          } else {
-            debugPrint('🎨 Using custom theme: $_selectedTheme');
-          }
-
-          if (_amoledModeEnabled) {
-            debugPrint('🌙 AMOLED mode enabled');
-          }
-
-          return MaterialApp(
-            title: 'LabLens',
-            debugShowCheckedModeBanner: false,
-            theme: ThemeUtils.createLightTheme(lightColorScheme),
-            darkTheme: ThemeUtils.createDarkTheme(darkColorScheme),
-            themeMode: ThemeMode.system,
-            // Enable smooth theme transitions
-            themeAnimationDuration: const Duration(milliseconds: 300),
-            themeAnimationCurve: Curves.easeInOut,
-            home: MainShell(
-              onAmoledModeChanged: updateAmoledMode,
-              onThemeChanged: updateTheme,
-            ),
+              return MaterialApp(
+                title: 'LabLens',
+                debugShowCheckedModeBanner: false,
+                theme: ThemeUtils.createLightTheme(lightColorScheme),
+                darkTheme: ThemeUtils.createDarkTheme(darkColorScheme),
+                themeMode: themeVM.themeMode,
+                themeAnimationDuration: const Duration(milliseconds: 300),
+                themeAnimationCurve: Curves.easeInOut,
+                home: const MainShell(),
+              );
+            },
           );
         },
       ),

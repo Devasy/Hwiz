@@ -51,6 +51,10 @@ dependencies:
   # Page Transitions & Animations
   animations: ^2.2.0
   
+  # Markdown Rendering
+  flutter_markdown: ^0.7.6
+
+  
   # CSV Export
   csv: ^6.0.0
   

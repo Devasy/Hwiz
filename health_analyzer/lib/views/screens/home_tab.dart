@@ -15,6 +15,7 @@ import 'compare_reports_screen.dart';
 import 'profile_list_screen.dart';
 import 'profile_form_screen.dart';
 import 'ask_ai_screen.dart';
+import 'settings_tab.dart';
 
 /// Home tab - main view with profile content
 class HomeTab extends StatefulWidget {
@@ -87,6 +88,14 @@ class _HomeTabState extends State<HomeTab> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const ProfileListScreen(),
+      ),
+    );
+  }
+
+  void _navigateToSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const SettingsTab(),
       ),
     );
   }
@@ -176,20 +185,13 @@ class _HomeTabState extends State<HomeTab> {
 
   Widget _buildTopBar() {
     return Container(
-      padding: const EdgeInsets.all(AppTheme.spacing16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.spacing16,
+        vertical: AppTheme.spacing12,
+      ),
       color: Theme.of(context).colorScheme.surface,
       child: Row(
         children: [
-          // Drawer button
-          IconButton(
-            icon: const Icon(Icons.menu),
-            tooltip: 'Open menu',
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
-            },
-          ),
-          const SizedBox(width: AppTheme.spacing8),
-
           // App logo/name
           Text(
             'LabLens',
@@ -234,39 +236,54 @@ class _HomeTabState extends State<HomeTab> {
             },
           ),
 
-          // Profile switcher
+          // Profile & Settings shortcut
           Consumer<ProfileViewModel>(
             builder: (context, profileVM, child) {
               final profile = profileVM.currentProfile;
 
               if (profile == null) {
                 return IconButton(
-                  icon: const Icon(Icons.person_add),
-                  onPressed: _showProfileSwitcher,
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: 'Settings & Profiles',
+                  onPressed: _navigateToSettings,
                 );
               }
 
-              return GestureDetector(
-                onTap: _showProfileSwitcher,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ProfileAvatar(
-                      name: profile.name,
-                      size: 40,
+              return Tooltip(
+                message: 'Settings & Profiles (${profile.name})',
+                child: InkWell(
+                  onTap: _navigateToSettings,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ProfileAvatar(
+                          name: profile.name,
+                          size: 34,
+                        ),
+                        const SizedBox(width: 8),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 80),
+                          child: Text(
+                            profile.name.split(' ')[0],
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.settings_outlined,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: AppTheme.spacing4),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 80),
-                      child: Text(
-                        profile.name.split(' ')[0],
-                        style: Theme.of(context).textTheme.labelSmall,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               );
             },

@@ -5,7 +5,6 @@ import '../../models/profile.dart';
 import '../../utils/page_transitions.dart';
 import 'profile_form_screen.dart';
 import 'report_list_screen.dart';
-import 'settings_tab.dart';
 import '../widgets/profile_card.dart';
 
 /// Screen to display and manage all profiles
@@ -32,19 +31,6 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
       appBar: AppBar(
         title: const Text('Family Profiles'),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const SettingsTab(),
-                ),
-              );
-            },
-          ),
-        ],
       ),
       body: Consumer<ProfileViewModel>(
         builder: (context, viewModel, child) {

@@ -1,152 +1,412 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/theme_extensions.dart';
 import '../../theme/theme_manager.dart';
 import '../../utils/page_transitions.dart';
+import '../../viewmodels/profile_viewmodel.dart';
+import '../../viewmodels/theme_viewmodel.dart';
+import '../../widgets/common/profile_avatar.dart';
 import 'settings_screen.dart';
 import 'profile_list_screen.dart';
+import 'profile_form_screen.dart';
 import 'data_management_screen.dart';
 
-/// Settings tab - app configuration and preferences
+/// Settings tab - app configuration, profiles, and theme preferences
 class SettingsTab extends StatelessWidget {
-  final Function(bool)? onAmoledModeChanged;
-  final Function(String)? onThemeChanged;
-
-  const SettingsTab({
-    super.key,
-    this.onAmoledModeChanged,
-    this.onThemeChanged,
-  });
+  const SettingsTab({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.surfaceColor,
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: const Text('Settings & Profiles'),
+        centerTitle: false,
       ),
-      body: ListView(
-        children: [
-          _buildSection(
-            'Family Members',
-            [
-              _buildTile(
-                Icons.people,
-                'Manage Profiles',
-                'Add, edit, or remove family members',
-                onTap: () {
-                  context.pushHorizontal(const ProfileListScreen());
-                },
+      body: Consumer2<ProfileViewModel, ThemeViewModel>(
+        builder: (context, profileVM, themeVM, child) {
+          final activeProfile = profileVM.currentProfile;
+          final allProfiles = profileVM.profiles;
+
+          return ListView(
+            padding: const EdgeInsets.only(bottom: AppTheme.spacing32),
+            children: [
+              // 1. Profile Switcher & Family Section
+              _buildSection(
+                'Active Profile & Family',
+                [
+                  _buildProfileSwitcherCard(context, profileVM, activeProfile, allProfiles),
+                ],
               ),
-            ],
-          ),
-          _buildSection(
-            'API Configuration',
-            [
-              _buildTile(
-                Icons.key,
-                'Gemini API Key',
-                'Configure your AI API key',
-                onTap: () {
-                  context.pushHorizontal(const SettingsScreen());
-                },
-              ),
-            ],
-          ),
-          _buildSection(
-            'Data Management',
-            [
-              _buildTile(
-                Icons.import_export,
-                'Export & Import Data',
-                'Export reports to CSV/JSON or import from backup',
-                onTap: () {
-                  context.pushHorizontal(const DataManagementScreen());
-                },
-              ),
-              _buildTile(
-                Icons.delete_outline,
-                'Clear All Data (Coming Soon)',
-                'Feature under development',
-                onTap: null,
-                isDestructive: false,
-              ),
-            ],
-          ),
-          _buildSection(
-            'App Preferences',
-            [
-              _buildTile(
-                Icons.palette_outlined,
-                'App Theme',
-                'Choose your favorite color theme',
-                onTap: () {
-                  _showThemeSelector(context);
-                },
-              ),
-              FutureBuilder<bool>(
-                future: ThemeManager.getAmoledMode(),
-                builder: (context, snapshot) {
-                  final isEnabled = snapshot.data ?? false;
-                  return SwitchListTile(
-                    secondary: const Icon(Icons.brightness_2),
-                    title: const Text('AMOLED Mode'),
-                    subtitle:
-                        const Text('Pure black background for dark theme'),
-                    value: isEnabled,
-                    onChanged: (value) {
-                      if (onAmoledModeChanged != null) {
-                        onAmoledModeChanged!(value);
-                      }
+
+              // 2. API Configuration
+              _buildSection(
+                'AI Configuration',
+                [
+                  _buildTile(
+                    Icons.key,
+                    'Gemini API Key & Model',
+                    'Configure your Google AI API key & model settings',
+                    onTap: () {
+                      context.pushHorizontal(const SettingsScreen());
                     },
+                  ),
+                ],
+              ),
+
+              // 3. App Theming & AMOLED Preferences
+              _buildSection(
+                'Appearance & Theme',
+                [
+                  // Theme Mode (System, Light, Dark)
+                  ListTile(
+                    leading: Icon(
+                      themeVM.themeMode == ThemeMode.dark
+                          ? Icons.dark_mode_outlined
+                          : themeVM.themeMode == ThemeMode.light
+                              ? Icons.light_mode_outlined
+                              : Icons.brightness_auto_outlined,
+                      color: context.primaryColor,
+                    ),
+                    title: const Text('Theme Mode'),
+                    subtitle: Text(
+                      themeVM.themeMode == ThemeMode.dark
+                          ? 'Dark Mode'
+                          : themeVM.themeMode == ThemeMode.light
+                              ? 'Light Mode'
+                              : 'System Default',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showThemeModeDialog(context, themeVM),
+                  ),
+
+                  // AMOLED Pure Black Toggle
+                  SwitchListTile(
+                    secondary: Icon(
+                      Icons.brightness_2,
+                      color: themeVM.isAmoledMode
+                          ? context.primaryColor
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    title: const Text('AMOLED Mode'),
+                    subtitle: const Text('Pure black (#000000) for OLED displays'),
+                    value: themeVM.isAmoledMode,
+                    onChanged: (value) {
+                      themeVM.setAmoledMode(value);
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            value
+                                ? 'AMOLED mode enabled (Pure Black)'
+                                : 'AMOLED mode disabled',
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // Accent Palette
+                  _buildTile(
+                    Icons.palette_outlined,
+                    'App Theme Palette',
+                    themeVM.selectedTheme,
+                    onTap: () {
+                      _showThemeSelector(context, themeVM);
+                    },
+                  ),
+                ],
+              ),
+
+              // 4. Data Management
+              _buildSection(
+                'Data Management',
+                [
+                  _buildTile(
+                    Icons.import_export,
+                    'Export & Import Data',
+                    'Export reports to CSV/JSON or import from backup',
+                    onTap: () {
+                      context.pushHorizontal(const DataManagementScreen());
+                    },
+                  ),
+                ],
+              ),
+
+              // 5. About & Help
+              _buildSection(
+                'About & Help',
+                [
+                  _buildTile(
+                    Icons.info_outline,
+                    'App Version',
+                    '1.0.4+5',
+                  ),
+                  _buildTile(
+                    Icons.code,
+                    'GitHub Repository',
+                    'View source code & contribute',
+                    onTap: () {
+                      _openGitHub(context);
+                    },
+                  ),
+                  _buildTile(
+                    Icons.person_outline,
+                    'Developer',
+                    'Created by @Devasy23',
+                    onTap: () {
+                      _showDeveloperInfo(context);
+                    },
+                  ),
+                  _buildTile(
+                    Icons.help_outline,
+                    'How to Use LabLens',
+                    'Tutorial and guide',
+                    onTap: () {
+                      _showTutorialDialog(context);
+                    },
+                  ),
+                  _buildTile(
+                    Icons.privacy_tip_outlined,
+                    'Privacy Policy',
+                    'All medical reports & data stored 100% locally',
+                    onTap: () {
+                      _showPrivacyDialog(context);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildProfileSwitcherCard(
+    BuildContext context,
+    ProfileViewModel profileVM,
+    dynamic activeProfile,
+    List<dynamic> allProfiles,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    if (activeProfile == null) {
+      return Padding(
+        padding: const EdgeInsets.all(AppTheme.spacing16),
+        child: Column(
+          children: [
+            const Text('No profile created yet.'),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              icon: const Icon(Icons.person_add),
+              label: const Text('Add Family Member'),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ProfileFormScreen()),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacing16, vertical: 8),
+      padding: const EdgeInsets.all(AppTheme.spacing16),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Current active profile badge & header
+          Row(
+            children: [
+              ProfileAvatar(
+                name: activeProfile.name,
+                size: 48,
+              ),
+              const SizedBox(width: AppTheme.spacing12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            activeProfile.name,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'Active',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${activeProfile.age} yrs • ${activeProfile.gender}${activeProfile.bloodGroup != null ? ' • ${activeProfile.bloodGroup}' : ''}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          if (allProfiles.length > 1) ...[
+            const SizedBox(height: AppTheme.spacing16),
+            const Divider(height: 1),
+            const SizedBox(height: AppTheme.spacing12),
+            Text(
+              'Switch Active Profile:',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: allProfiles.map((p) {
+                  final isSelected = p.id == activeProfile.id;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      selected: isSelected,
+                      avatar: ProfileAvatar(name: p.name, size: 24),
+                      label: Text(p.name.split(' ')[0]),
+                      onSelected: (selected) {
+                        if (selected && !isSelected) {
+                          HapticFeedback.selectionClick();
+                          profileVM.selectProfile(p);
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Switched active profile to ${p.name}'),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: AppTheme.spacing12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton.icon(
+                icon: const Icon(Icons.person_add_outlined, size: 18),
+                label: const Text('Add Member'),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ProfileFormScreen()),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.manage_accounts_outlined, size: 18),
+                label: const Text('Manage All'),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ProfileListScreen()),
                   );
                 },
               ),
             ],
           ),
-          _buildSection(
-            'About & Help',
-            [
-              _buildTile(
-                Icons.info_outline,
-                'App Version',
-                '1.0.3+4',
-              ),
-              _buildTile(
-                Icons.code,
-                'GitHub Repository',
-                'View source code & contribute',
-                onTap: () {
-                  _openGitHub(context);
-                },
-              ),
-              _buildTile(
-                Icons.person_outline,
-                'Developer',
-                'Created by @Devasy23',
-                onTap: () {
-                  _showDeveloperInfo(context);
-                },
-              ),
-              _buildTile(
-                Icons.help_outline,
-                'How to Use LabLens',
-                'Tutorial and guide',
-                onTap: () {
-                  _showTutorialDialog(context);
-                },
-              ),
-              _buildTile(
-                Icons.privacy_tip_outlined,
-                'Privacy Policy',
-                'All data stored locally',
-                onTap: () {
-                  _showPrivacyDialog(context);
-                },
-              ),
-            ],
+        ],
+      ),
+    );
+  }
+
+  void _showThemeModeDialog(BuildContext context, ThemeViewModel themeVM) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Theme Mode'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<ThemeMode>(
+              title: const Text('System Default'),
+              subtitle: const Text('Matches device system appearance'),
+              value: ThemeMode.system,
+              groupValue: themeVM.themeMode,
+              onChanged: (mode) {
+                if (mode != null) {
+                  themeVM.setThemeMode(mode);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('Light Mode'),
+              subtitle: const Text('Clean light appearance'),
+              value: ThemeMode.light,
+              groupValue: themeVM.themeMode,
+              onChanged: (mode) {
+                if (mode != null) {
+                  themeVM.setThemeMode(mode);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('Dark Mode'),
+              subtitle: const Text('Dark appearance for low-light environments'),
+              value: ThemeMode.dark,
+              groupValue: themeVM.themeMode,
+              onChanged: (mode) {
+                if (mode != null) {
+                  themeVM.setThemeMode(mode);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -214,16 +474,14 @@ class SettingsTab extends StatelessWidget {
     );
   }
 
-  void _showThemeSelector(BuildContext context) async {
-    final currentTheme = await ThemeManager.getSelectedTheme();
+  void _showThemeSelector(BuildContext context, ThemeViewModel themeVM) {
+    final currentTheme = themeVM.selectedTheme;
     final themes = ThemeManager.getAvailableThemes();
-
-    if (!context.mounted) return;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Choose Theme'),
+        title: const Text('Choose Theme Palette'),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
@@ -258,16 +516,15 @@ class SettingsTab extends StatelessWidget {
                 ),
                 title: Text(themeName),
                 subtitle: themeName == 'Adaptive Theme'
-                    ? const Text('Uses system wallpaper colors')
+                    ? const Text('Uses dynamic wallpaper colors (Material You)')
                     : null,
                 onTap: () {
-                  if (onThemeChanged != null) {
-                    onThemeChanged!(themeName);
-                  }
+                  themeVM.setSelectedTheme(themeName);
                   Navigator.pop(context);
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Theme changed to $themeName'),
+                      content: Text('Theme palette changed to $themeName'),
                       duration: const Duration(seconds: 2),
                     ),
                   );

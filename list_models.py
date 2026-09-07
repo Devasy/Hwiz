@@ -5,6 +5,7 @@ and identify any transcribe / document-specific models.
 import json
 import urllib.request
 import urllib.error
+import os
 
 API_KEY = os.environ.get('GEMINI_API_KEY', '')
 

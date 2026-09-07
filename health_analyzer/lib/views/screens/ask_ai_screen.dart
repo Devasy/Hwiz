@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../viewmodels/ask_ai_viewmodel.dart';
 import '../../viewmodels/profile_viewmodel.dart';
 
@@ -351,14 +352,75 @@ class _AskAiScreenState extends State<AskAiScreen> {
                       bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(18),
                     ),
                   ),
-                  child: SelectableText(
-                    text,
-                    style: TextStyle(
-                      color: fg,
-                      fontSize: 15,
-                      height: 1.45,
-                    ),
-                  ),
+                  child: isUser
+                      ? SelectableText(
+                          text,
+                          style: TextStyle(
+                            color: fg,
+                            fontSize: 15,
+                            height: 1.45,
+                          ),
+                        )
+                      : MarkdownBody(
+                          data: text,
+                          selectable: true,
+                          styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+                            p: TextStyle(
+                              color: fg,
+                              fontSize: 15,
+                              height: 1.45,
+                            ),
+                            strong: TextStyle(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            h1: TextStyle(
+                              color: colorScheme.primary,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            h2: TextStyle(
+                              color: colorScheme.primary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            h3: TextStyle(
+                              color: colorScheme.onSurface,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            listBullet: TextStyle(
+                              color: colorScheme.primary,
+                              fontSize: 15,
+                            ),
+                            code: TextStyle(
+                              backgroundColor: colorScheme.surfaceContainerLow,
+                              color: colorScheme.onSurfaceVariant,
+                              fontFamily: 'monospace',
+                              fontSize: 13,
+                            ),
+                            codeblockDecoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            tableBorder: TableBorder.all(
+                              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                              width: 1,
+                            ),
+                            tableHead: TextStyle(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                            tableBody: TextStyle(
+                              color: fg,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
                 ),
                 if (isStreaming)
                   Padding(

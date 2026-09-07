@@ -8,7 +8,9 @@
 .history
 proxy_runner.ps1
 *.apk
-
+*.pdf
+.env
+*.env
 
 
 # Flutter repo-specific

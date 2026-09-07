@@ -5,6 +5,7 @@ Tests whether transcribe model can process PDF inlineData at all.
 import base64, json, re, time
 from pathlib import Path
 import urllib.request, urllib.error
+import os
 
 API_KEY  = os.environ.get('GEMINI_API_KEY', '')
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
