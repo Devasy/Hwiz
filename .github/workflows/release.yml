@@ -114,5 +114,5 @@ jobs:
           serviceAccountJsonPlainText: ${{ env.PLAY_STORE_JSON_KEY }}
           packageName: com.devasy.lablens
           releaseFiles: health_analyzer/build/app/outputs/bundle/release/app-release.aab
-          track: internal
+          track: alpha
           status: completed
