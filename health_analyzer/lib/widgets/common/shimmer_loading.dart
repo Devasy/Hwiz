@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 /// A shimmer loading effect for skeleton screens
 class ShimmerLoading extends StatefulWidget {
@@ -117,15 +117,19 @@ class Skeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCircle = borderRadius == null &&
+        width != null &&
+        height != null &&
+        width == height;
+
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHigh,
-        borderRadius: borderRadius ?? BorderRadius.circular(8),
-        shape: borderRadius == null && width == height
-            ? BoxShape.circle
-            : BoxShape.rectangle,
+        shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
+        borderRadius:
+            isCircle ? null : (borderRadius ?? BorderRadius.circular(8)),
       ),
     );
   }

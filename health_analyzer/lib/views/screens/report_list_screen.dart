@@ -317,15 +317,42 @@ class _ReportCard extends StatelessWidget {
                                   ),
                         ),
                       const SizedBox(height: 4),
-                      Text(
-                        '${report.parameters.length} parameters',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withValues(alpha: 0.8),
-                            ),
-                      ),
+                      if (report.parameters.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade100,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.warning_amber_rounded,
+                                  size: 12, color: Colors.amber.shade900),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Incomplete (0 parameters)',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.amber.shade900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Text(
+                          '${report.parameters.length} parameters',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withValues(alpha: 0.8),
+                                  ),
+                        ),
                     ],
                   ),
                 ),

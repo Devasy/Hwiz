@@ -484,16 +484,13 @@ void _showApiKeyDialog(BuildContext context, SettingsViewModel viewModel,
                   controller: controller,
                   decoration: const InputDecoration(
                     labelText: 'API Key',
-                    hintText: 'AIza...',
+                    hintText: 'Enter your API key',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.key),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter an API key';
-                    }
-                    if (!value.startsWith('AIza')) {
-                      return 'Invalid format. Should start with "AIza"';
                     }
                     return null;
                   },

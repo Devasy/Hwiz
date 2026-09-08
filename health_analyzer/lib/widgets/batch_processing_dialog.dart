@@ -108,10 +108,12 @@ class _BatchProcessingDialogState extends State<BatchProcessingDialog> {
           _isProcessing = false;
         });
 
-        // Auto-close and return result after brief delay to show success
-        await Future.delayed(const Duration(milliseconds: 1500));
-        if (mounted && !_isCancelling) {
-          Navigator.of(context).pop(result);
+        // Only auto-close if all reports succeeded with zero failures
+        if (result.failureCount == 0) {
+          await Future.delayed(const Duration(milliseconds: 1500));
+          if (mounted && !_isCancelling) {
+            Navigator.of(context).pop(result);
+          }
         }
       }
     } catch (e) {
@@ -121,6 +123,88 @@ class _BatchProcessingDialogState extends State<BatchProcessingDialog> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Batch processing error: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _retryFailedFiles() async {
+    if (_result == null || _result!.failed.isEmpty) return;
+
+    final failedFiles = _result!.failed.map((f) => f.file).toList();
+    final previousSuccessful = List<BatchReportResult>.from(_result!.successful);
+
+    setState(() {
+      _isProcessing = true;
+      _isCancelling = false;
+      _processed = 0;
+      _successful = 0;
+      _failed = 0;
+      _currentFile = null;
+    });
+
+    try {
+      final retryResult = await _batchService.processReports(
+        files: failedFiles,
+        profileId: widget.profileId,
+        gender: widget.gender,
+        maxParallel: widget.maxParallel,
+        maxRetries: widget.maxRetries + 1,
+        onProgress: (processed, total, currentFile) {
+          if (mounted) {
+            setState(() {
+              _processed = processed;
+              _currentFile = currentFile;
+            });
+          }
+        },
+        onReportProcessed: (file, report, error) {
+          if (mounted) {
+            setState(() {
+              if (error == null) {
+                _successful++;
+              } else {
+                _failed++;
+              }
+            });
+          }
+
+          if (report != null) {
+            _saveReportToDatabase(report);
+          }
+        },
+      );
+
+      if (mounted) {
+        final mergedSuccessful = [...previousSuccessful, ...retryResult.successful];
+        final mergedResult = BatchProcessingResult(
+          totalProcessed: widget.files.length,
+          successful: mergedSuccessful,
+          failed: retryResult.failed,
+          startTime: _result!.startTime,
+          endTime: DateTime.now(),
+          cancelled: retryResult.cancelled,
+        );
+
+        setState(() {
+          _result = mergedResult;
+          _isProcessing = false;
+        });
+
+        if (mergedResult.failureCount == 0) {
+          await Future.delayed(const Duration(milliseconds: 1500));
+          if (mounted && !_isCancelling) {
+            Navigator.of(context).pop(mergedResult);
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Retry error: $e')),
         );
       }
     }
@@ -303,14 +387,35 @@ class _BatchProcessingDialogState extends State<BatchProcessingDialog> {
                 _buildResultCard(context, _result!),
                 const SizedBox(height: 24),
 
-                // Close button
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(_result),
-                    child: const Text('Close'),
+                // Action buttons
+                if (_result!.failed.isNotEmpty) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(_result),
+                          child: const Text('Dismiss'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          icon: const Icon(Icons.refresh),
+                          onPressed: _retryFailedFiles,
+                          label: Text('Retry (${_result!.failed.length})'),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                ] else ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(context).pop(_result),
+                      child: const Text('Done'),
+                    ),
+                  ),
+                ],
               ],
             ],
           ),

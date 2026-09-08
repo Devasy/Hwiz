@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../viewmodels/profile_viewmodel.dart';
 import '../../viewmodels/report_viewmodel.dart';
 import '../../models/profile.dart';
+import '../../widgets/batch_processing_dialog.dart';
 import '../../widgets/common/profile_avatar.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/expandable_fab.dart';
@@ -37,7 +40,11 @@ class _HomeTabState extends State<HomeTab> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _loadReportsIfNeeded();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadReportsIfNeeded();
+      }
+    });
   }
 
   void _loadReportsIfNeeded() {
@@ -107,6 +114,134 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
+  Future<void> _processBatch(List<File> files, Profile profile) async {
+    final batchResult = await showBatchProcessingDialog(
+      context: context,
+      files: files,
+      profileId: profile.id!,
+      gender: profile.gender,
+    );
+
+    if (batchResult != null && mounted) {
+      final reportVM = context.read<ReportViewModel>();
+      await reportVM.loadReportsForProfile(profile.id!);
+
+      if (batchResult.successCount > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${batchResult.successCount}/${batchResult.totalProcessed} report(s) processed successfully!',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleCameraAction(Profile? profile) async {
+    if (profile == null) {
+      _showProfileSwitcher();
+      return;
+    }
+    final reportVM = context.read<ReportViewModel>();
+    final success = await reportVM.scanFromCamera(profile.id!);
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Report scanned successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handlePhotosAction(Profile? profile) async {
+    if (profile == null) {
+      _showProfileSwitcher();
+      return;
+    }
+    final reportVM = context.read<ReportViewModel>();
+    final files = await reportVM.pickMultiplePhotos();
+    if (files.isEmpty || !mounted) return;
+
+    if (files.length > 1) {
+      await _processBatch(files, profile);
+    } else {
+      final success = await reportVM.processImageFile(files.first, profile.id!);
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Photo report scanned successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleSinglePdfAction(Profile? profile) async {
+    if (profile == null) {
+      _showProfileSwitcher();
+      return;
+    }
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        allowMultiple: false,
+        dialogTitle: 'Select PDF Report',
+      );
+      if (result == null || result.files.isEmpty || !mounted) return;
+      final path = result.files.first.path;
+      if (path == null) return;
+
+      final reportVM = context.read<ReportViewModel>();
+      final success = await reportVM.processPdfFile(File(path), profile.id!);
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PDF report processed successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking PDF: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleBatchPdfsAction(Profile? profile) async {
+    if (profile == null) {
+      _showProfileSwitcher();
+      return;
+    }
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        allowMultiple: true,
+        dialogTitle: 'Select Reports to Batch Process',
+      );
+      if (result == null || result.files.isEmpty || !mounted) return;
+      final files =
+          result.files.where((f) => f.path != null).map((f) => File(f.path!)).toList();
+      if (files.isEmpty) return;
+
+      await _processBatch(files, profile);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking files: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,28 +287,29 @@ class _HomeTabState extends State<HomeTab> {
       ),
       floatingActionButton: Consumer<ProfileViewModel>(
         builder: (context, profileVM, child) {
-          final hasProfile = profileVM.currentProfile != null;
+          final profile = profileVM.currentProfile;
 
           return ExpandableFab(
             actions: [
-              // Scan Report - Primary action
               ExpandableFabAction(
                 icon: Icons.camera_alt,
-                label: 'Scan Report',
-                onPressed: _navigateToScan,
+                label: 'Camera',
+                onPressed: () => _handleCameraAction(profile),
               ),
-              // Compare Reports - if profile exists
-              if (hasProfile)
-                ExpandableFabAction(
-                  icon: Icons.compare_arrows,
-                  label: 'Compare',
-                  onPressed: _navigateToCompareForCurrent,
-                ),
-              // Manage Profiles
               ExpandableFabAction(
-                icon: Icons.people,
-                label: 'Profiles',
-                onPressed: _navigateToProfiles,
+                icon: Icons.photo_library,
+                label: 'Photos',
+                onPressed: () => _handlePhotosAction(profile),
+              ),
+              ExpandableFabAction(
+                icon: Icons.picture_as_pdf,
+                label: 'Single PDF',
+                onPressed: () => _handleSinglePdfAction(profile),
+              ),
+              ExpandableFabAction(
+                icon: Icons.upload_file,
+                label: 'Multiple PDFs',
+                onPressed: () => _handleBatchPdfsAction(profile),
               ),
             ],
             child: const Icon(Icons.add),
@@ -520,10 +656,36 @@ class _HomeTabState extends State<HomeTab> {
                 ],
               ),
               const SizedBox(height: AppTheme.spacing12),
-              Text(
-                '${report.parameters.length} parameters',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
+              if (report.parameters.isEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade100,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.warning_amber_rounded,
+                          size: 14, color: Colors.amber.shade900),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Incomplete (0 parameters)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.amber.shade900,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Text(
+                  '${report.parameters.length} parameters',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
             ],
           ),
         ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path/path.dart' as p;
 import '../../theme/app_theme.dart';
 import '../../theme/theme_extensions.dart';
 import '../../models/blood_report.dart';
@@ -32,9 +34,11 @@ class ReportDetailsScreen extends StatefulWidget {
 }
 
 class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
+  late BloodReport _currentReport;
   final Map<String, bool> _expandedGroups = {};
   final GeminiService _geminiService = GeminiService();
 
+  bool _isReprocessing = false;
   bool _showAiInsights = false;
   bool _loadingAiInsights = false;
   Map<String, dynamic>? _aiInsights;
@@ -43,15 +47,22 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize all groups as collapsed
+    _currentReport = widget.report;
+    _initGroups();
+    _loadCachedAiInsights();
+  }
+
+  void _initGroups() {
+    _expandedGroups.clear();
     _getParameterGroups().forEach((group, _) {
       _expandedGroups[group] = false;
     });
+  }
 
-    // Load cached AI analysis if available
-    if (widget.report.aiAnalysis != null) {
+  void _loadCachedAiInsights() {
+    if (_currentReport.aiAnalysis != null) {
       try {
-        _aiInsights = jsonDecode(widget.report.aiAnalysis!);
+        _aiInsights = jsonDecode(_currentReport.aiAnalysis!);
       } catch (e) {
         debugPrint('Error parsing cached AI analysis: $e');
       }
@@ -72,7 +83,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
 
     try {
       // Prepare abnormal parameters data
-      final abnormalParams = widget.report.abnormalParameters.map((p) {
+      final abnormalParams = _currentReport.abnormalParameters.map((p) {
         return {
           'name': p.rawParameterName ?? p.parameterName,
           'value': p.parameterValue,
@@ -84,7 +95,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       }).toList();
 
       // Prepare all parameters data
-      final allParams = widget.report.parameters.map((p) {
+      final allParams = _currentReport.parameters.map((p) {
         return {
           'name': p.rawParameterName ?? p.parameterName,
           'value': p.parameterValue,
@@ -98,10 +109,10 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       );
 
       // Cache the AI analysis in database
-      if (widget.report.id != null) {
+      if (_currentReport.id != null) {
         final aiAnalysisJson = jsonEncode(insights);
         await DatabaseHelper.instance.updateAiAnalysis(
-          widget.report.id!,
+          _currentReport.id!,
           aiAnalysisJson,
         );
       }
@@ -120,6 +131,124 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     }
   }
 
+  /// Reprocess the current report with Gemini AI
+  Future<void> _reprocessReport() async {
+    if (_isReprocessing) return;
+
+    File? fileToProcess;
+    if (_currentReport.reportImagePath != null &&
+        _currentReport.reportImagePath!.isNotEmpty) {
+      final f = File(_currentReport.reportImagePath!);
+      if (await f.exists()) {
+        fileToProcess = f;
+      }
+    }
+
+    if (fileToProcess == null) {
+      // Pick file from device
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+      );
+      if (result == null ||
+          result.files.isEmpty ||
+          result.files.single.path == null) {
+        return;
+      }
+      fileToProcess = File(result.files.single.path!);
+    }
+
+    setState(() {
+      _isReprocessing = true;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Reprocessing blood report with Gemini AI...'),
+            ],
+          ),
+          duration: Duration(seconds: 45),
+        ),
+      );
+    }
+
+    try {
+      final viewModel = context.read<ReportViewModel>();
+      final updatedReport = await viewModel.reprocessReport(
+        reportId: _currentReport.id!,
+        reportFile: fileToProcess,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      if (updatedReport != null) {
+        setState(() {
+          _currentReport = updatedReport;
+          _aiInsights = null;
+          _initGroups();
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '✅ Successfully extracted ${_currentReport.parameters.length} parameters!',
+            ),
+            backgroundColor: AppTheme.successColor,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          icon: const Icon(Icons.error_outline,
+              color: AppTheme.errorColor, size: 36),
+          title: const Text('Reprocessing Failed'),
+          content: Text(
+            e.toString().replaceAll('Exception: ', ''),
+            style: Theme.of(ctx).textTheme.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Dismiss'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _reprocessReport();
+              },
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isReprocessing = false;
+        });
+      }
+    }
+  }
+
   Map<String, List<Parameter>> _getParameterGroups() {
     final Map<String, List<Parameter>> groups = {
       'Complete Blood Count (CBC)': [],
@@ -131,7 +260,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       'Others': [],
     };
 
-    for (final param in widget.report.parameters) {
+    for (final param in _currentReport.parameters) {
       final name = param.parameterName.toLowerCase();
 
       // CBC
@@ -209,8 +338,9 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final groups = _getParameterGroups();
-    final abnormalCount = widget.report.abnormalParameters.length;
-    final normalCount = widget.report.parameters.length - abnormalCount;
+    final abnormalCount = _currentReport.abnormalParameters.length;
+    final normalCount = _currentReport.parameters.length - abnormalCount;
+    final bool hasZeroParams = _currentReport.parameters.isEmpty;
 
     return Scaffold(
       backgroundColor: context.surfaceColor,
@@ -218,10 +348,10 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_formatDate(widget.report.testDate)),
-            if (widget.report.labName != null)
+            Text(_formatDate(_currentReport.testDate)),
+            if (_currentReport.labName != null)
               Text(
-                widget.report.labName!,
+                _currentReport.labName!,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
           ],
@@ -237,51 +367,246 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       ),
       body: CustomScrollView(
         slivers: [
-          // Summary Card
+          // Summary Card or Zero-Parameters Card
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(AppTheme.spacing16),
-              child: _buildSummaryCard(normalCount, abnormalCount),
+              child: hasZeroParams
+                  ? _buildEmptyParametersCard()
+                  : _buildSummaryCard(normalCount, abnormalCount),
             ),
           ),
 
-          // Parameters Groups
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final groupName = groups.keys.elementAt(index);
-                final parameters = groups[groupName]!;
-                final isExpanded = _expandedGroups[groupName] ?? false;
+          if (!hasZeroParams) ...[
+            // Parameters Groups
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final groupName = groups.keys.elementAt(index);
+                  final parameters = groups[groupName]!;
+                  final isExpanded = _expandedGroups[groupName] ?? false;
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppTheme.spacing16,
-                    vertical: AppTheme.spacing8,
-                  ),
-                  child: _buildParameterGroup(
-                    groupName,
-                    parameters,
-                    isExpanded,
-                  ),
-                );
-              },
-              childCount: groups.length,
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacing16,
+                      vertical: AppTheme.spacing8,
+                    ),
+                    child: _buildParameterGroup(
+                      groupName,
+                      parameters,
+                      isExpanded,
+                    ),
+                  );
+                },
+                childCount: groups.length,
+              ),
             ),
-          ),
 
-          // AI Insights Section
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(AppTheme.spacing16),
-              child: _buildAiInsightsSection(),
+            // AI Insights Section
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(AppTheme.spacing16),
+                child: _buildAiInsightsSection(),
+              ),
             ),
-          ),
+          ],
 
           // Bottom padding
           const SliverToBoxAdapter(
             child: SizedBox(height: AppTheme.spacing32),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyParametersCard() {
+    final hasFilePath = _currentReport.reportImagePath != null &&
+        _currentReport.reportImagePath!.isNotEmpty;
+    final fileExists =
+        hasFilePath && File(_currentReport.reportImagePath!).existsSync();
+    final fileName =
+        hasFilePath ? p.basename(_currentReport.reportImagePath!) : null;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        side: BorderSide(
+          color: Colors.amber.shade300,
+          width: 1.5,
+        ),
+      ),
+      color: Colors.amber.shade50.withValues(alpha: 0.5),
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spacing20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header icon + badge
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppTheme.spacing12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade100,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                  ),
+                  child: Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.amber.shade900,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(width: AppTheme.spacing16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '0 Parameters Extracted',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber.shade900,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Incomplete / Failed Extraction',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.amber.shade800,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppTheme.spacing16),
+            const Divider(),
+            const SizedBox(height: AppTheme.spacing12),
+
+            // Explanation
+            Text(
+              'This report was saved but contains no extracted blood parameters. '
+              'This can happen when a scan times out, network drops, '
+              'or the AI response was interrupted.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.8),
+                    height: 1.4,
+                  ),
+            ),
+            const SizedBox(height: AppTheme.spacing16),
+
+            // Source File Status Box
+            Container(
+              padding: const EdgeInsets.all(AppTheme.spacing12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    fileExists
+                        ? (fileName != null &&
+                                fileName.toLowerCase().endsWith('.pdf')
+                            ? Icons.picture_as_pdf
+                            : Icons.image)
+                        : Icons.broken_image_outlined,
+                    color: fileExists
+                        ? context.primaryColor
+                        : Theme.of(context).colorScheme.error,
+                    size: 24,
+                  ),
+                  const SizedBox(width: AppTheme.spacing12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          fileExists
+                              ? (fileName ?? 'Source File')
+                              : (hasFilePath
+                                  ? 'Source file missing on device'
+                                  : 'No source file attached'),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          fileExists
+                              ? 'Original document is ready to reprocess'
+                              : 'Select document to reprocess',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: fileExists
+                                        ? AppTheme.successColor
+                                        : Theme.of(context).colorScheme.error,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (fileExists)
+                    IconButton(
+                      icon: const Icon(Icons.visibility_outlined, size: 20),
+                      tooltip: 'View Document',
+                      onPressed: _showReportImage,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppTheme.spacing20),
+
+            // Action Buttons
+            FilledButton.icon(
+              onPressed: _isReprocessing ? null : _reprocessReport,
+              icon: _isReprocessing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.refresh),
+              label: Text(_isReprocessing
+                  ? 'Reprocessing...'
+                  : (fileExists ? 'Reprocess Report' : 'Pick File & Reprocess')),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: context.primaryColor,
+              ),
+            ),
+            const SizedBox(height: AppTheme.spacing8),
+            OutlinedButton.icon(
+              onPressed: _confirmDelete,
+              icon: const Icon(Icons.delete_outline,
+                  color: AppTheme.errorColor, size: 18),
+              label: const Text(
+                'Delete Report',
+                style: TextStyle(color: AppTheme.errorColor),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppTheme.errorColor),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -317,7 +642,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                 Expanded(
                   child: _buildStatColumn(
                     'Total',
-                    '${widget.report.parameters.length}',
+                    '${_currentReport.parameters.length}',
                     Icons.analytics_outlined,
                     context.primaryColor,
                   ),
@@ -565,7 +890,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => ParameterTrendScreen(
-                    profileId: widget.report.profileId,
+                    profileId: _currentReport.profileId,
                     profileName: widget.profileName ?? 'Profile',
                     initialParameter: parameter.parameterName,
                   ),
@@ -1001,14 +1326,23 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
+                leading: const Icon(Icons.refresh, color: AppTheme.primaryColor),
+                title: const Text('Reprocess Report'),
+                subtitle: const Text('Extract parameters with Gemini AI'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _reprocessReport();
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.image),
                 title: const Text('View Report Image'),
                 onTap: () {
                   debugPrint('🖼️ View Report Image tapped from bottom sheet');
                   debugPrint(
-                      '  Report Image Path: ${widget.report.reportImagePath}');
+                      '  Report Image Path: ${_currentReport.reportImagePath}');
                   Navigator.pop(context);
-                  if (widget.report.reportImagePath != null) {
+                  if (_currentReport.reportImagePath != null) {
                     _showReportImage();
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1056,16 +1390,16 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       if (widget.profileName != null) {
         summary.writeln('Patient: ${widget.profileName}');
       }
-      summary.writeln('Date: ${_formatDate(widget.report.testDate)}');
-      if (widget.report.labName != null) {
-        summary.writeln('Lab: ${widget.report.labName}');
+      summary.writeln('Date: ${_formatDate(_currentReport.testDate)}');
+      if (_currentReport.labName != null) {
+        summary.writeln('Lab: ${_currentReport.labName}');
       }
       summary.writeln('');
 
       summary.writeln('Summary:');
-      final abnormalCount = widget.report.abnormalParameters.length;
-      final normalCount = widget.report.parameters.length - abnormalCount;
-      summary.writeln('• Total Parameters: ${widget.report.parameters.length}');
+      final abnormalCount = _currentReport.abnormalParameters.length;
+      final normalCount = _currentReport.parameters.length - abnormalCount;
+      summary.writeln('• Total Parameters: ${_currentReport.parameters.length}');
       summary.writeln('• Normal: $normalCount');
       summary.writeln('• Abnormal: $abnormalCount');
       summary.writeln('');
@@ -1074,7 +1408,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       if (abnormalCount > 0) {
         summary.writeln('⚠️ Abnormal Parameters:');
         summary.writeln('━━━━━━━━━━━━━━━━━━━');
-        for (final param in widget.report.abnormalParameters) {
+        for (final param in _currentReport.abnormalParameters) {
           final name = _formatParameterName(
               param.rawParameterName ?? param.parameterName);
           summary.writeln('$name: ${param.parameterValue}${param.unit ?? ''}');
@@ -1111,7 +1445,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       // Share the text
       await Share.share(
         summary.toString(),
-        subject: 'Blood Test Report - ${_formatDate(widget.report.testDate)}',
+        subject: 'Blood Test Report - ${_formatDate(_currentReport.testDate)}',
       );
     } catch (e) {
       if (mounted) {
@@ -1143,11 +1477,11 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
             FilledButton(
               onPressed: () async {
                 debugPrint(
-                    '🗑️ Delete button pressed for report ${widget.report.id}');
+                    '🗑️ Delete button pressed for report ${_currentReport.id}');
                 final messenger = ScaffoldMessenger.of(context);
                 final nav = Navigator.of(context);
-                final profileId = widget.report.profileId;
-                final reportId = widget.report.id!;
+                final profileId = _currentReport.profileId;
+                final reportId = _currentReport.id!;
 
                 nav.pop(); // Close dialog
 
@@ -1189,7 +1523,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
 
   /// Show the report image in a full-screen viewer
   void _showReportImage() {
-    final imagePath = widget.report.reportImagePath!;
+    final imagePath = _currentReport.reportImagePath!;
     final isPDF = imagePath.toLowerCase().endsWith('.pdf');
 
     debugPrint('🖼️ Opening report image viewer');
@@ -1201,7 +1535,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       _ReportImageViewer(
         imagePath: imagePath,
         isPDF: isPDF,
-        reportDate: widget.report.testDate,
+        reportDate: _currentReport.testDate,
       ),
     );
   }

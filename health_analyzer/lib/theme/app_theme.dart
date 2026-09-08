@@ -410,7 +410,6 @@ class AppTheme {
         ),
         iconColor: scheme.onSurfaceVariant,
         textColor: scheme.onSurface,
-        tileColor: scheme.surface,
         selectedTileColor: scheme.secondaryContainer,
         selectedColor: scheme.onSecondaryContainer,
         shape: RoundedRectangleBorder(
@@ -505,6 +504,13 @@ class AppTheme {
         labelLarge: labelLarge.copyWith(color: scheme.onSurface),
         labelMedium: labelMedium.copyWith(color: scheme.onSurfaceVariant),
         labelSmall: labelSmall.copyWith(color: scheme.onSurfaceVariant),
+      ),
+
+      // Page transitions with Android 14+ Predictive Back Gestures
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: <TargetPlatform, PageTransitionsBuilder>{
+          TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+        },
       ),
     );
   }
@@ -692,7 +698,6 @@ class AppTheme {
         ),
         iconColor: scheme.onSurfaceVariant,
         textColor: scheme.onSurface,
-        tileColor: scheme.surface,
         selectedTileColor: scheme.secondaryContainer,
         selectedColor: scheme.onSecondaryContainer,
         shape: RoundedRectangleBorder(
@@ -730,6 +735,13 @@ class AppTheme {
       iconTheme: IconThemeData(
         color: scheme.onSurface,
         size: 24,
+      ),
+
+      // Page transitions with Android 14+ Predictive Back Gestures
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: <TargetPlatform, PageTransitionsBuilder>{
+          TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+        },
       ),
     );
   }

@@ -94,10 +94,16 @@ class _AskAiScreenState extends State<AskAiScreen> {
               ),
             ),
           IconButton(
-            icon: const Icon(Icons.delete_sweep_outlined),
-            tooltip: 'Clear Chat',
+            icon: const Icon(Icons.history_rounded),
+            tooltip: 'Chat History',
+            onPressed: () => _showHistorySheet(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add_comment_outlined),
+            tooltip: 'New Chat',
             onPressed: () {
-              context.read<AskAiViewModel>().clearConversation();
+              context.read<AskAiViewModel>().startNewConversation();
+              _textController.clear();
             },
           ),
         ],
@@ -492,6 +498,238 @@ class _AskAiScreenState extends State<AskAiScreen> {
                   )
                 : const Icon(Icons.send_rounded),
             onPressed: vm.isLoading ? null : () => _handleSend(vm, profileVM),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showHistorySheet(BuildContext context) {
+    final vm = context.read<AskAiViewModel>();
+    final profile = context.read<ProfileViewModel>().currentProfile;
+    vm.loadSessions(profileId: profile?.id);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        initialChildSize: 0.65,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        builder: (_, scrollController) {
+          final colorScheme = Theme.of(context).colorScheme;
+          return Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  child: Row(
+                    children: [
+                      Icon(Icons.history_rounded, color: colorScheme.primary),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Chat History',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const Spacer(),
+                      Consumer<AskAiViewModel>(
+                        builder: (_, askVM, __) {
+                          if (askVM.sessions.isEmpty) return const SizedBox.shrink();
+                          return TextButton.icon(
+                            icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+                            label: const Text('Clear All'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: colorScheme.error,
+                            ),
+                            onPressed: () => _confirmClearAllSessions(context),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Divider(height: 1),
+
+                // New conversation quick action
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: colorScheme.primaryContainer,
+                    child: Icon(Icons.add, color: colorScheme.onPrimaryContainer),
+                  ),
+                  title: const Text('Start New Conversation'),
+                  subtitle: const Text('Clear active chat & start fresh'),
+                  onTap: () {
+                    vm.startNewConversation();
+                    _textController.clear();
+                    Navigator.pop(sheetContext);
+                  },
+                ),
+
+                const Divider(height: 1),
+
+                // Session list
+                Expanded(
+                  child: Consumer<AskAiViewModel>(
+                    builder: (_, askVM, __) {
+                      if (askVM.sessions.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                size: 48,
+                                color: colorScheme.outlineVariant,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No chat history yet',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Your past conversations will appear here',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.outline,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        controller: scrollController,
+                        itemCount: askVM.sessions.length,
+                        itemBuilder: (ctx, i) {
+                          final session = askVM.sessions[i];
+                          final isActive = session.id == askVM.currentSessionId;
+
+                          return ListTile(
+                            selected: isActive,
+                            selectedTileColor: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                            leading: CircleAvatar(
+                              radius: 20,
+                              backgroundColor: isActive
+                                  ? colorScheme.primary
+                                  : colorScheme.surfaceContainerHigh,
+                              child: Icon(
+                                Icons.auto_awesome,
+                                size: 18,
+                                color: isActive
+                                    ? colorScheme.onPrimary
+                                    : colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            title: Text(
+                              session.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '${session.messageCount} msg${session.messageCount == 1 ? '' : 's'} • ${_formatDate(session.updatedAt)}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 18),
+                              tooltip: 'Delete Chat',
+                              onPressed: () => askVM.deleteSession(session.id!),
+                            ),
+                            onTap: () {
+                              askVM.restoreSession(session.id!);
+                              Navigator.pop(sheetContext);
+                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Loaded "${session.title}"'),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _formatDate(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 60) {
+      return diff.inMinutes <= 1 ? 'Just now' : '${diff.inMinutes}m ago';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours}h ago';
+    } else if (diff.inDays == 1) {
+      return 'Yesterday';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays}d ago';
+    } else {
+      return '${dt.day}/${dt.month}/${dt.year}';
+    }
+  }
+
+  void _confirmClearAllSessions(BuildContext context) {
+    final vm = context.read<AskAiViewModel>();
+    final profile = context.read<ProfileViewModel>().currentProfile;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Clear All Chat History?'),
+        content: const Text(
+          'This will permanently delete all saved AI conversation sessions for this profile.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () {
+              vm.deleteAllSessions(profileId: profile?.id);
+              Navigator.pop(dialogCtx);
+            },
+            child: const Text('Delete All'),
           ),
         ],
       ),

@@ -35,21 +35,9 @@ class ApiKeyService {
   /// Validate API key by making a test request to Gemini API
   /// Returns a tuple: (isValid, errorMessage)
   Future<(bool, String?)> validateApiKey(String apiKey) async {
-    if (apiKey.trim().isEmpty) {
+    final trimmed = apiKey.trim();
+    if (trimmed.isEmpty) {
       return (false, 'API key cannot be empty');
-    }
-
-    // Check basic format - Gemini API keys typically start with "AIza"
-    if (!apiKey.startsWith('AIza')) {
-      return (
-        false,
-        'Invalid API key format. Gemini API keys should start with "AIza"'
-      );
-    }
-
-    // Check length - typical Gemini API keys are 39 characters
-    if (apiKey.length < 30) {
-      return (false, 'API key seems too short. Please check and try again');
     }
 
     try {

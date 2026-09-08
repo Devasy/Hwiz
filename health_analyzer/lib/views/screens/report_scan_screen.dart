@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/theme_extensions.dart';
+import '../../models/profile.dart';
 import '../../viewmodels/profile_viewmodel.dart';
 import '../../viewmodels/report_viewmodel.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/batch_processing_dialog.dart';
+import '../widgets/profile_switcher_sheet.dart';
 
 /// Screen for scanning/uploading reports
 class ReportScanScreen extends StatefulWidget {
@@ -56,6 +58,53 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
     }
   }
 
+  Future<void> _processBatchFiles(List<File> files, Profile profile) async {
+    if (files.isEmpty) return;
+
+    try {
+      final batchResult = await showBatchProcessingDialog(
+        context: context,
+        files: files,
+        profileId: profile.id!,
+        gender: profile.gender,
+      );
+
+      debugPrint(
+          '📊 Batch processing result: ${batchResult != null ? "Received" : "NULL!"}');
+
+      if (batchResult != null && mounted) {
+        debugPrint('🔄 Reloading reports for profile ${profile.id}...');
+        final reportViewModel = context.read<ReportViewModel>();
+        await reportViewModel.loadReportsForProfile(profile.id!);
+        debugPrint('✅ Reports reloaded successfully');
+
+        if (batchResult.successCount > 0 && batchResult.failureCount == 0) {
+          if (mounted) {
+            Navigator.of(context).pop();
+            _showSuccess(
+              '${batchResult.successCount}/${batchResult.totalProcessed} '
+              'report${batchResult.successCount > 1 ? 's' : ''} processed successfully!',
+            );
+          }
+        } else if (batchResult.failureCount > 0) {
+          if (mounted) {
+            _showFailureDetails(batchResult, profile);
+          }
+        }
+      } else if (batchResult == null && mounted) {
+        final reportViewModel = context.read<ReportViewModel>();
+        await reportViewModel.loadReportsForProfile(profile.id!);
+        if (mounted) {
+          _showSuccess('Reports may have been saved. Please check your report list.');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showError('Failed to process batch: $e');
+      }
+    }
+  }
+
   Future<void> _handleGallery() async {
     final profileVM = context.read<ProfileViewModel>();
     final profile = profileVM.currentProfile;
@@ -65,23 +114,38 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
       return;
     }
 
-    setState(() {
-      _isProcessing = true;
-      _processingProgress = null;
-    });
-
     try {
       final reportViewModel = context.read<ReportViewModel>();
-      final success = await reportViewModel.scanFromGallery(profile.id!);
+      final files = await reportViewModel.pickMultiplePhotos();
 
-      if (success && mounted) {
-        Navigator.of(context).pop();
-        _showSuccess('Report scanned successfully!');
-      } else if (mounted && reportViewModel.error != null) {
-        _showError(reportViewModel.error!);
+      if (files.isEmpty) {
+        return; // User cancelled
+      }
+
+      if (files.length > 1) {
+        // Multiple photos selected -> route to batch processing
+        await _processBatchFiles(files, profile);
+      } else {
+        // Single photo
+        setState(() {
+          _isProcessing = true;
+          _processingProgress = null;
+        });
+
+        final success = await reportViewModel.processImageFile(files.first, profile.id!);
+
+        if (success && mounted) {
+          Navigator.of(context).pop();
+          _showSuccess('Report scanned successfully!');
+        } else if (mounted && reportViewModel.error != null) {
+          _showError(
+            reportViewModel.error!,
+            onRetry: _handleGallery,
+          );
+        }
       }
     } catch (e) {
-      _showError('Failed to pick image: $e');
+      _showError('Failed to pick/process image: $e', onRetry: _handleGallery);
     } finally {
       if (mounted) {
         setState(() {
@@ -91,7 +155,7 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
     }
   }
 
-  Future<void> _handlePdf() async {
+  Future<void> _handlePdf({bool allowMultiple = true}) async {
     final profileVM = context.read<ProfileViewModel>();
     final profile = profileVM.currentProfile;
 
@@ -100,26 +164,52 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
       return;
     }
 
-    setState(() {
-      _isProcessing = true;
-      _processingProgress = null;
-    });
-
     try {
-      final reportViewModel = context.read<ReportViewModel>();
-      final success = await reportViewModel.scanFromPDF(profile.id!);
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        allowMultiple: allowMultiple,
+        dialogTitle: allowMultiple ? 'Select PDF Report(s)' : 'Select PDF Report',
+      );
 
-      if (success && mounted) {
-        Navigator.of(context).pop();
-        _showSuccess('Report scanned successfully!');
-      } else if (mounted && reportViewModel.error != null) {
-        _showError(reportViewModel.error!);
+      if (result == null || result.files.isEmpty) {
+        return; // User cancelled
+      }
+
+      final files = result.files
+          .where((f) => f.path != null)
+          .map((f) => File(f.path!))
+          .toList();
+
+      if (files.isEmpty) {
+        _showError('No valid PDF files selected');
+        return;
+      }
+
+      if (files.length > 1) {
+        await _processBatchFiles(files, profile);
+      } else {
+        // Single PDF
         setState(() {
-          _isProcessing = false;
+          _isProcessing = true;
+          _processingProgress = null;
         });
+
+        final reportViewModel = context.read<ReportViewModel>();
+        final success = await reportViewModel.processPdfFile(files.first, profile.id!);
+
+        if (success && mounted) {
+          Navigator.of(context).pop();
+          _showSuccess('Report scanned successfully!');
+        } else if (mounted && reportViewModel.error != null) {
+          _showError(
+            reportViewModel.error!,
+            onRetry: () => _handlePdf(allowMultiple: allowMultiple),
+          );
+        }
       }
     } catch (e) {
-      _showError('Failed to process PDF: $e');
+      _showError('Failed to process PDF: $e', onRetry: () => _handlePdf(allowMultiple: allowMultiple));
     } finally {
       if (mounted) {
         setState(() {
@@ -139,7 +229,6 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
     }
 
     try {
-      // Pick multiple files
       final result = await FilePicker.platform.pickFiles(
         allowMultiple: true,
         type: FileType.custom,
@@ -151,7 +240,6 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
         return; // User cancelled
       }
 
-      // Filter files with valid paths
       final files = result.files
           .where((f) => f.path != null)
           .map((f) => File(f.path!))
@@ -162,102 +250,7 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
         return;
       }
 
-      // Show confirmation dialog
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Process Multiple Reports'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                  'You selected ${files.length} file${files.length > 1 ? 's' : ''}'),
-              const SizedBox(height: 12),
-              Text(
-                'Estimated time: ~${(files.length * 1.5).round()} seconds',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.secondary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'All reports will be processed and added to ${profile.name}\'s profile.',
-                style: const TextStyle(fontSize: 14),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Process'),
-            ),
-          ],
-        ),
-      );
-
-      if (confirm != true || !mounted) return;
-
-      // Show batch processing dialog
-      final batchResult = await showBatchProcessingDialog(
-        context: context,
-        files: files,
-        profileId: profile.id!,
-        gender: profile.gender,
-      );
-
-      debugPrint(
-          '📊 Batch processing result: ${batchResult != null ? "Received" : "NULL!"}');
-
-      if (batchResult != null && mounted) {
-        debugPrint('🔄 Reloading reports for profile ${profile.id}...');
-
-        // Refresh reports in viewmodel
-        final reportViewModel = context.read<ReportViewModel>();
-        await reportViewModel.loadReportsForProfile(profile.id!);
-
-        debugPrint('✅ Reports reloaded successfully');
-
-        // Navigate back and show summary
-        Navigator.of(context).pop();
-
-        // Show results
-        if (batchResult.successCount > 0) {
-          _showSuccess(
-            '${batchResult.successCount}/${batchResult.totalProcessed} '
-            'report${batchResult.successCount > 1 ? 's' : ''} processed successfully!',
-          );
-
-          // Show detailed results if there were failures
-          if (batchResult.failureCount > 0) {
-            Future.delayed(const Duration(seconds: 2), () {
-              if (mounted) {
-                _showFailureDetails(batchResult);
-              }
-            });
-          }
-        } else if (batchResult.failureCount > 0) {
-          _showError('Failed to process any reports. Please try again.');
-        }
-      } else if (batchResult == null && mounted) {
-        // Dialog was dismissed without completing - still try to reload
-        debugPrint(
-            '⚠️ Batch result is null! Dialog may have been dismissed early.');
-        debugPrint('🔄 Attempting to reload reports anyway...');
-
-        final reportViewModel = context.read<ReportViewModel>();
-        await reportViewModel.loadReportsForProfile(profile.id!);
-
-        Navigator.of(context).pop();
-
-        _showSuccess(
-            'Reports may have been saved. Please check your report list.');
-      }
+      await _processBatchFiles(files, profile);
     } catch (e) {
       if (mounted) {
         _showError('Failed to process batch: $e');
@@ -265,7 +258,7 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
     }
   }
 
-  void _showFailureDetails(dynamic batchResult) {
+  void _showFailureDetails(dynamic batchResult, Profile profile) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -313,7 +306,7 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
               ),
             const SizedBox(height: 12),
             Text(
-              'Tip: Try scanning failed reports individually for better results.',
+              'You can retry processing the failed reports now.',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.secondary,
@@ -322,9 +315,20 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
           ],
         ),
         actions: [
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: const Text('Dismiss'),
+          ),
+          FilledButton.icon(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              Navigator.of(context).pop();
+              final failedFiles = (batchResult.failed as List)
+                  .map((f) => f.file as File)
+                  .toList();
+              _processBatchFiles(failedFiles, profile);
+            },
+            label: Text('Retry (${batchResult.failureCount})'),
           ),
         ],
       ),
@@ -343,10 +347,22 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
     }
   }
 
-  void _showError(String message) {
+  void _showError(String message, {VoidCallback? onRetry}) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
+        SnackBar(
+          content: Text(message),
+          action: onRetry != null
+              ? SnackBarAction(
+                  label: 'Retry',
+                  textColor: Colors.amberAccent,
+                  onPressed: onRetry,
+                )
+              : null,
+          duration: onRetry != null
+              ? const Duration(seconds: 6)
+              : const Duration(seconds: 4),
+        ),
       );
     }
   }
@@ -419,7 +435,12 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
                               ),
                               TextButton(
                                 onPressed: () {
-                                  // TODO: Show profile switcher
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (context) => const ProfileSwitcherSheet(),
+                                  );
                                 },
                                 child: const Text('Change'),
                               ),
@@ -458,30 +479,30 @@ class _ReportScanScreenState extends State<ReportScanScreen> {
                           _buildScanOption(
                             icon: Icons.camera_alt,
                             label: 'Take Photo',
-                            description: 'Use camera to capture report',
+                            description: 'Capture report with camera',
                             onTap: _handleCamera,
                           ),
                           const SizedBox(height: AppTheme.spacing16),
                           _buildScanOption(
                             icon: Icons.photo_library,
-                            label: 'From Gallery',
-                            description: 'Choose image from gallery',
+                            label: 'Photos / Gallery',
+                            description: 'Select single or multiple photos',
                             onTap: _handleGallery,
                           ),
                           const SizedBox(height: AppTheme.spacing16),
                           _buildScanOption(
                             icon: Icons.picture_as_pdf,
-                            label: 'Upload PDF',
-                            description: 'Select PDF file',
-                            onTap: _handlePdf,
+                            label: 'Single PDF',
+                            description: 'Select a single PDF document',
+                            onTap: () => _handlePdf(allowMultiple: false),
                           ),
                           const SizedBox(height: AppTheme.spacing24),
                           // Batch upload option with highlight
                           _buildBatchOption(
                             icon: Icons.upload_file,
-                            label: 'Batch Upload',
+                            label: 'Multiple PDFs / Batch',
                             description: 'Process multiple reports at once',
-                            badge: 'NEW',
+                            badge: 'BATCH',
                             onTap: _handleBatchUpload,
                           ),
                         ],

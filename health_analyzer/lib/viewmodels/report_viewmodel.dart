@@ -111,24 +111,28 @@ class ReportViewModel extends ChangeNotifier {
     }
   }
 
-  /// Scan report from PDF file
-  Future<bool> scanFromPDF(int profileId) async {
+  /// Process an existing image file directly
+  Future<bool> processImageFile(File imageFile, int profileId) async {
+    return await _processImage(imageFile, profileId);
+  }
+
+  /// Process an existing PDF file directly
+  Future<bool> processPdfFile(File pdfFile, int profileId) async {
+    return await _processPDF(pdfFile, profileId);
+  }
+
+  /// Pick multiple photos from gallery
+  Future<List<File>> pickMultiplePhotos() async {
     try {
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
-        allowMultiple: false,
+      final List<XFile> images = await _imagePicker.pickMultiImage(
+        imageQuality: 85,
+        maxWidth: 1920,
+        maxHeight: 1920,
       );
-
-      if (result == null || result.files.isEmpty) {
-        return false; // User cancelled
-      }
-
-      final file = File(result.files.first.path!);
-      return await _processPDF(file, profileId);
+      return images.where((x) => x.path.isNotEmpty).map((x) => File(x.path)).toList();
     } catch (e) {
-      _setError('Failed to pick PDF: ${e.toString()}');
-      return false;
+      _setError('Failed to pick photos: ${e.toString()}');
+      return [];
     }
   }
 
@@ -451,6 +455,83 @@ class ReportViewModel extends ChangeNotifier {
         firstReportDate: null,
         lastReportDate: null,
       );
+    }
+  }
+
+  /// Reprocess an existing report (e.g. if previous extraction yielded 0 parameters)
+  Future<BloodReport?> reprocessReport({
+    required int reportId,
+    File? reportFile,
+  }) async {
+    _setScanning(true);
+    _clearError();
+    try {
+      final currentReport = await _databaseHelper.getReportById(reportId);
+      if (currentReport == null) {
+        throw Exception('Report #$reportId not found in database');
+      }
+
+      File? fileToProcess = reportFile;
+      if (fileToProcess == null && currentReport.reportImagePath != null) {
+        final existing = File(currentReport.reportImagePath!);
+        if (await existing.exists()) {
+          fileToProcess = existing;
+        }
+      }
+
+      if (fileToProcess == null || !await fileToProcess.exists()) {
+        throw Exception(
+            'Source report document not found on device. Please select the file to reprocess.');
+      }
+
+      debugPrint(
+          '🔄 Reprocessing report #$reportId from ${fileToProcess.path}...');
+      final extractedData =
+          await _geminiService.extractBloodReportData(fileToProcess);
+
+      DateTime? extractedDate;
+      try {
+        final dateStr =
+            extractedData['test_date'] ?? extractedData['reportDate'];
+        if (dateStr != null) extractedDate = DateTime.parse(dateStr);
+      } catch (_) {}
+
+      final extractedLab =
+          extractedData['lab_name'] ?? extractedData['labName'];
+      final rawParams = extractedData['parameters'];
+      final Map<String, dynamic> paramsMap = rawParams is Map<String, dynamic>
+          ? rawParams
+          : (rawParams is Map
+              ? Map<String, dynamic>.from(rawParams)
+              : <String, dynamic>{});
+
+      if (paramsMap.isEmpty) {
+        throw Exception(
+            'No blood parameters could be extracted from this document. Please ensure the image or PDF is clear and legible.');
+      }
+
+      await _databaseHelper.updateReportParameters(
+        reportId: reportId,
+        parameters: paramsMap,
+        testDate: extractedDate,
+        labName: extractedLab is String ? extractedLab : null,
+        reportImagePath: fileToProcess.path,
+      );
+
+      // Refresh report lists
+      await loadReportsForProfile(currentReport.profileId);
+      await loadAllReports();
+
+      final updatedReport = await _databaseHelper.getReportById(reportId);
+      debugPrint(
+          '✅ Successfully reprocessed report #$reportId with ${updatedReport?.parameters.length ?? 0} parameters');
+      return updatedReport;
+    } catch (e) {
+      debugPrint('❌ Failed to reprocess report #$reportId: $e');
+      _setError(e.toString());
+      rethrow;
+    } finally {
+      _setScanning(false);
     }
   }
 

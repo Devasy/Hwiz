@@ -156,9 +156,6 @@ class _ApiSetupScreenState extends State<ApiSetupScreen> {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter your API key';
                     }
-                    if (value.trim().length < 20) {
-                      return 'API key seems too short';
-                    }
                     return null;
                   },
                 ),

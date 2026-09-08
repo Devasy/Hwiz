@@ -7,6 +7,8 @@
 .buildlog/
 .history
 proxy_runner.ps1
+proxy.ps1
+transcription_comparison.json
 *.apk
 *.pdf
 .env

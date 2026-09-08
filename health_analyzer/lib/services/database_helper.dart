@@ -251,6 +251,92 @@ class DatabaseHelper {
     });
   }
 
+  /// Update/repopulate parameters for an existing report (e.g. after reprocessing)
+  Future<void> updateReportParameters({
+    required int reportId,
+    required Map<String, dynamic> parameters,
+    DateTime? testDate,
+    String? labName,
+    String? reportImagePath,
+  }) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      // Update report metadata if newly extracted
+      final Map<String, dynamic> reportUpdates = {};
+      if (testDate != null) {
+        reportUpdates['test_date'] = testDate.toIso8601String();
+      }
+      if (labName != null && labName.isNotEmpty) {
+        reportUpdates['lab_name'] = labName;
+      }
+      if (reportImagePath != null && reportImagePath.isNotEmpty) {
+        reportUpdates['report_image_path'] = reportImagePath;
+      }
+      if (reportUpdates.isNotEmpty) {
+        await txn.update(
+          AppConstants.tableReports,
+          reportUpdates,
+          where: 'id = ?',
+          whereArgs: [reportId],
+        );
+      }
+
+      // Delete existing parameters (if any)
+      await txn.delete(
+        AppConstants.tableBloodParameters,
+        where: 'report_id = ?',
+        whereArgs: [reportId],
+      );
+
+      // Insert new parameters
+      for (var entry in parameters.entries) {
+        if (entry.value is! Map) continue;
+        final valMap = Map<String, dynamic>.from(entry.value as Map);
+        if (valMap['value'] == null) continue;
+        final num? val = valMap['value'] is num
+            ? (valMap['value'] as num)
+            : double.tryParse(valMap['value'].toString());
+        if (val == null) continue;
+
+        final num? minVal = valMap['ref_min'] is num
+            ? (valMap['ref_min'] as num)
+            : (valMap['ref_min'] != null
+                ? double.tryParse(valMap['ref_min'].toString())
+                : null);
+        final num? maxVal = valMap['ref_max'] is num
+            ? (valMap['ref_max'] as num)
+            : (valMap['ref_max'] != null
+                ? double.tryParse(valMap['ref_max'].toString())
+                : null);
+
+        await txn.insert(AppConstants.tableBloodParameters, {
+          'report_id': reportId,
+          'parameter_name': entry.key,
+          'parameter_value': val.toDouble(),
+          'unit': valMap['unit']?.toString() ?? '',
+          'reference_range_min': minVal?.toDouble(),
+          'reference_range_max': maxVal?.toDouble(),
+          'raw_parameter_name': valMap['raw_name']?.toString() ?? entry.key,
+        });
+      }
+    });
+  }
+
+  /// Get single report by ID including its parameters
+  Future<BloodReport?> getReportById(int reportId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> reportMaps = await db.query(
+      AppConstants.tableReports,
+      where: 'id = ?',
+      whereArgs: [reportId],
+      limit: 1,
+    );
+    if (reportMaps.isEmpty) return null;
+    final report = BloodReport.fromMap(reportMaps.first);
+    final parameters = await getParametersByReport(report.id!);
+    return report.copyWith(parameters: parameters);
+  }
+
   /// Get all reports for a profile
   Future<List<BloodReport>> getReportsByProfile(int profileId) async {
     final db = await database;
